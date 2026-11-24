@@ -1,19 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import "./NuevoProducto.css";
 import { useNavigate, useLocation } from "react-router-dom";
+import {
+  obtenerCategorias,
+  crearProducto,
+  actualizarProducto,
+  formularioAProducto,
+  mensajeDeError,
+} from "../../../api/carta";
 // Bootstrap 5 debe estar cargado una sola vez en tu app (ej. en main.jsx / index.js):
 //   import "bootstrap/dist/css/bootstrap.min.css";
 
-/* Opciones de los selects (luego puedes traerlas de tu API) */
-const CATEGORIAS = [
-  "Desayunos",
-  "Sándwiches",
-  "Menú del día",
-  "Jugos y bebidas",
-  "Snacks",
-  "Postres",
-  "Café",
-];
+/* Las categorías vienen de la carta del local (base de datos) */
 const DISPONIBILIDAD = ["Disponible", "Agotado"];
 const PRECIO_MIN = 3.5;
 const PRECIO_MAX = 18.0;
@@ -33,16 +31,34 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
      - si no, usa los valores del diseño */
   const [form, setForm] = useState(
     productoEditar ?? {
-      nombre: "Jugo surtido",
-      descripcion: "Papaya, plátano y naranja licuados al momento. Vaso de 16 oz.",
-      categoria: location.state?.categoria ?? "Jugos y bebidas",
-      precio: "6.50",
-      tiempo: "5 minutos",
+      nombre: "",
+      descripcion: "",
+      categoria: location.state?.categoria ?? "",
+      precio: "",
+      tiempo: "",
       disponibilidad: "Disponible",
     }
   );
   const [foto, setFoto] = useState(null); // URL temporal de la foto elegida
   const inputFotoRef = useRef(null);
+
+  const [categorias, setCategorias] = useState([]);
+  const [cargandoCategorias, setCargandoCategorias] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  // Trae las categorías del local; si el formulario no tiene una elegida, usa la primera
+  useEffect(() => {
+    obtenerCategorias()
+      .then((lista) => {
+        setCategorias(lista);
+        setForm((prev) =>
+          prev.categoria || lista.length === 0 ? prev : { ...prev, categoria: lista[0].name }
+        );
+      })
+      .catch((e) => setError(mensajeDeError(e, "No se pudieron cargar las categorías.")))
+      .finally(() => setCargandoCategorias(false));
+  }, []);
 
   // Libera la URL temporal cuando cambia la foto o se cierra la vista
   useEffect(() => () => foto && URL.revokeObjectURL(foto), [foto]);
@@ -60,11 +76,30 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
     if (archivo) setFoto(URL.createObjectURL(archivo));
   };
 
-  const guardar = (e) => {
+  const guardar = async (e) => {
     e.preventDefault();
-    if (precioInvalido) return;
-    onGuardar?.({ ...form, precio: precioNumero, foto });
-    navigate("/enterprises/Micarta"); // redirige a Mi carta
+    if (precioInvalido || form.precio === "") return;
+
+    const datos = formularioAProducto(form, categorias);
+    if (!datos.category_id) {
+      setError("Elige una categoría para el producto.");
+      return;
+    }
+
+    setGuardando(true);
+    setError("");
+    try {
+      if (esEdicion) {
+        await actualizarProducto(productoEditar.id, datos);
+      } else {
+        await crearProducto(datos);
+      }
+      onGuardar?.({ ...form, precio: precioNumero, foto });
+      navigate("/enterprises/Micarta"); // redirige a Mi carta
+    } catch (err) {
+      setError(mensajeDeError(err, "No se pudo guardar el producto."));
+      setGuardando(false);
+    }
   };
 
   const cancelar = () => {
@@ -89,6 +124,12 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
       <h1 className="np-titulo h4 mb-3">{titulo}</h1>
 
       {/* 3. TARJETA BLANCA CON EL FORMULARIO Y LA VISTA PREVIA */}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
+
       <form className="card np-card" onSubmit={guardar}>
         <div className="card-body p-4">
           <div className="row g-4">
@@ -132,10 +173,15 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
                     value={form.categoria}
                     onChange={cambiar("categoria")}
                   >
-                    {CATEGORIAS.map((c) => (
-                      <option key={c}>{c}</option>
+                    {categorias.map((c) => (
+                      <option key={c.id}>{c.name}</option>
                     ))}
                   </select>
+                  {!cargandoCategorias && categorias.length === 0 && (
+                    <div className="np-ayuda text-danger">
+                      Primero crea una categoría en «Mi carta».
+                    </div>
+                  )}
                 </div>
                 <div className="col-12 col-md-6">
                   <label className="np-label" htmlFor="np-precio">PRECIO</label>
@@ -148,6 +194,7 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
                       className={`form-control np-precio ${precioInvalido ? "is-invalid" : ""}`}
                       value={form.precio}
                       onChange={cambiar("precio")}
+                      required
                     />
                   </div>
                   <div className={precioInvalido ? "np-ayuda text-danger" : "np-ayuda"}>
@@ -160,13 +207,19 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
               <div className="row g-3 mb-3">
                 <div className="col-12 col-md-6">
                   <label className="np-label" htmlFor="np-tiempo">TIEMPO DE PREPARACIÓN</label>
-                  <input
-                    id="np-tiempo"
-                    type="text"
-                    className="form-control"
-                    value={form.tiempo}
-                    onChange={cambiar("tiempo")}
-                  />
+                  <div className="input-group">
+                    <input
+                      id="np-tiempo"
+                      type="number"
+                      min="0"
+                      step="1"
+                      className="form-control"
+                      placeholder="Ej. 5"
+                      value={form.tiempo}
+                      onChange={cambiar("tiempo")}
+                    />
+                    <span className="input-group-text np-prefijo">min</span>
+                  </div>
                 </div>
                 <div className="col-12 col-md-6">
                   <label className="np-label" htmlFor="np-disp">DISPONIBILIDAD</label>
@@ -219,8 +272,12 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
                 <button type="button" className="btn btn-light border np-btn" onClick={cancelar}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-danger np-btn">
-                  {esEdicion ? "Guardar cambios" : "Guardar producto"}
+                <button
+                  type="submit"
+                  className="btn btn-danger np-btn"
+                  disabled={guardando || categorias.length === 0}
+                >
+                  {guardando ? "Guardando…" : esEdicion ? "Guardar cambios" : "Guardar producto"}
                 </button>
               </div>
             </div>

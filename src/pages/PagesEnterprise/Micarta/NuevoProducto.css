@@ -1,102 +1,121 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap");
 
-/* ---------- Pantalla completa ----------
-   Quita límites de ancho/centrado que traen las plantillas de Vite o CRA. */
-html,
-body,
-#root {
-  width: 100%;
-  height: auto;
-  min-height: 100%;
-  max-width: none;
-  overflow: visible;
-  margin: 0;
-  padding: 0;
-  display: block;
-  text-align: left;
-  background: #fffaf7;
-}
+/* Formulario de producto (nuevo / editar).
+   Todo va dentro de .np-app para no afectar otras páginas
+   (se quitó el reset global de html/body/#root que rompía el layout enterprise). */
 
-/* Solo lo que Bootstrap no trae. Todo dentro de .np-app para no afectar el resto del proyecto. */
 .np-app {
   /* Variables de Bootstrap sobrescritas solo dentro de este componente */
   --bs-body-font-family: "Inter", system-ui, sans-serif;
-  --bs-body-font-size: 0.75rem;
-  --bs-body-bg: #fffaf7;
-  --bs-body-color: #1f1715;
-  --bs-danger: #d9432e;
-  --bs-danger-rgb: 217, 67, 46;
-  --bs-border-color: #ece4e0;
-  --np-rayas-1: #f6e6e1;
-  --np-rayas-2: #f9eeea;
-  --np-suave: #7a6a64;
+  --bs-body-font-size: 0.875rem;
+  --bs-body-color: #261915;
+  --bs-danger: #d9402f;
+  --bs-danger-rgb: 217, 64, 47;
+  --bs-border-color: #eadcd6;
+  --np-rayas-1: #f6e3df;
+  --np-rayas-2: #fbefec;
+  --np-suave: #7c6960;
 
-  width: 100%;
-  height: 100vh;      /* alto fijo = alto de la ventana */
-  overflow-y: auto;   /* scroll vertical dentro del componente */
+  /* Ocupa el área de contenido, igual que las demás páginas de enterprise */
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  box-sizing: border-box;
+  overflow-y: auto;
   overflow-x: hidden;
-  background: var(--bs-body-bg);
+  padding: 22px 28px 32px !important;
+  background: #fffbf8;
   color: var(--bs-body-color);
   font-family: var(--bs-body-font-family);
   font-size: var(--bs-body-font-size);
+  line-height: 1.5;
 }
 
-.np-xs { font-size: 0.6rem; }
-.np-app .breadcrumb { --bs-breadcrumb-divider: "›"; }
-.np-titulo { font-family: "Poppins", sans-serif; font-weight: 600; }
+/* ---------- Ruta y título ---------- */
+.np-xs { font-size: 0.8rem; }
 
-/* Tarjeta principal (se estira al ancho disponible) */
-.np-card { width: 100%; border-radius: 10px; }
+.np-app .breadcrumb {
+  --bs-breadcrumb-divider: "›";
+  font-weight: 600;
+}
+.np-app .breadcrumb-item { color: var(--np-suave); }
+.np-app .breadcrumb-item.active { color: #d9402f; }
 
-/* Etiquetas en mayúsculas y textos de ayuda */
+.np-titulo {
+  font-family: "Poppins", sans-serif;
+  font-weight: 700;
+  font-size: 1.6rem !important;
+  letter-spacing: -0.015em;
+  color: #261915;
+}
+
+/* ---------- Tarjeta del formulario ---------- */
+.np-card {
+  width: 100%;
+  border: 1px solid #f0e2dc;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(80, 40, 25, 0.05), 0 10px 24px -14px rgba(80, 40, 25, 0.2);
+}
+.np-card .card-body { padding: 1.5rem !important; }
+
+/* Etiquetas y textos de ayuda */
 .np-label {
   display: block;
-  margin-bottom: 0.3rem;
-  font-size: 0.5rem;
-  font-weight: 600;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
   letter-spacing: 0.07em;
-  color: var(--np-suave);
-}
-.np-ayuda {
-  margin-top: 0.3rem;
-  font-size: 0.55rem;
+  text-transform: uppercase;
   color: var(--np-suave);
 }
 
-/* Campos de formulario compactos, como en el diseño */
+.np-ayuda {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--np-suave);
+}
+
+/* ---------- Campos ---------- */
 .np-app .form-control,
 .np-app .form-select {
-  font-size: 0.65rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 6px;
+  font-size: 0.9rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.6rem;
   border-color: var(--bs-border-color);
+  background-color: #fffdfc;
 }
+
 .np-app .form-control:focus,
 .np-app .form-select:focus {
-  border-color: var(--bs-danger);
-  box-shadow: 0 0 0 0.2rem rgba(217, 67, 46, 0.15);
+  border-color: #d9402f;
+  box-shadow: 0 0 0 0.2rem rgba(217, 64, 47, 0.15);
 }
-.np-textarea { min-height: 88px; resize: vertical; }
+
+.np-textarea { min-height: 110px; resize: vertical; }
 
 /* Precio: prefijo "S/" integrado al campo */
 .np-prefijo {
-  font-size: 0.65rem;
-  background: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--np-suave);
+  background: #fffdfc;
   border-color: var(--bs-border-color);
   border-right: 0;
+  border-radius: 0.6rem 0 0 0.6rem;
   padding-right: 0;
 }
-.np-precio { border-left: 0; padding-left: 0.35rem !important; }
+.np-precio { border-left: 0; padding-left: 0.4rem !important; border-radius: 0 0.6rem 0.6rem 0 !important; }
 
-/* Fondo rayado reutilizable para foto 1:1 y miniatura */
+/* ---------- Fotografía ---------- */
 .np-placeholder {
   position: relative;
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: repeating-linear-gradient(135deg, var(--np-rayas-1) 0 6px, var(--np-rayas-2) 6px 12px);
-  font-family: ui-monospace, monospace;
-  font-size: 0.45rem;
+  background: repeating-linear-gradient(135deg, var(--np-rayas-1) 0 8px, var(--np-rayas-2) 8px 16px);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
   color: var(--np-suave);
 }
 .np-placeholder img {
@@ -106,37 +125,64 @@ body,
   height: 100%;
   object-fit: cover;
 }
-.np-miniatura { width: 72px; height: 72px; border-radius: 8px; }
+.np-miniatura { width: 84px; height: 84px; border-radius: 0.75rem; border: 1px solid #f0e2dc; }
 
-/* Botón "Cambiar fotografía" (largo, borde rojo) */
 .np-btn-foto {
   width: 100%;
-  max-width: 214px;
-  font-size: 0.6rem;
+  max-width: 230px;
+  font-size: 0.85rem;
   font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.6rem;
   background: #fff;
-  --bs-btn-color: #d9432e;
-  --bs-btn-border-color: #d9432e;
-  --bs-btn-hover-bg: #d9432e;
-  --bs-btn-hover-border-color: #d9432e;
-  --bs-btn-active-bg: #d9432e;
-  --bs-btn-active-border-color: #d9432e;
+  --bs-btn-color: #d9402f;
+  --bs-btn-border-color: #d9402f;
+  --bs-btn-hover-bg: #d9402f;
+  --bs-btn-hover-border-color: #d9402f;
+  --bs-btn-active-bg: #b82d20;
+  --bs-btn-active-border-color: #b82d20;
 }
 
-/* Botones Cancelar / Guardar */
-.np-btn { font-size: 0.62rem; font-weight: 600; padding: 0.55rem 1.1rem; border-radius: 6px; }
+/* ---------- Botones Cancelar / Guardar ---------- */
+.np-btn {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.6rem 1.3rem;
+  border-radius: 0.6rem;
+}
+
 .np-app .btn-danger {
-  --bs-btn-bg: #d9432e;
-  --bs-btn-border-color: #d9432e;
-  --bs-btn-hover-bg: #bf3825;
-  --bs-btn-hover-border-color: #bf3825;
-  --bs-btn-active-bg: #bf3825;
-  --bs-btn-active-border-color: #bf3825;
+  --bs-btn-bg: #d9402f;
+  --bs-btn-border-color: #d9402f;
+  --bs-btn-hover-bg: #b82d20;
+  --bs-btn-hover-border-color: #b82d20;
+  --bs-btn-active-bg: #b82d20;
+  --bs-btn-active-border-color: #b82d20;
+  box-shadow: 0 4px 12px -4px rgba(217, 64, 47, 0.45);
 }
 
-/* Vista previa del comensal */
-.np-preview { border-radius: 10px; overflow: hidden; }
+/* ---------- Vista previa del comensal ---------- */
+.np-preview {
+  max-width: 320px;
+  border: 1px solid #f0e2dc;
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(80, 40, 25, 0.05), 0 10px 24px -14px rgba(80, 40, 25, 0.2);
+}
 .np-preview__foto { aspect-ratio: 1 / 1; width: 100%; }
-.np-preview__nombre { font-size: 0.72rem; font-weight: 600; }
-.np-preview__desc { font-size: 0.58rem; color: var(--np-suave); line-height: 1.4; }
-.np-preview__precio { font-family: "Poppins", sans-serif; font-size: 0.8rem; }
+.np-preview__nombre { font-size: 1rem; font-weight: 700; color: #261915; }
+.np-preview__desc { font-size: 0.85rem; color: var(--np-suave); line-height: 1.45; }
+.np-preview__precio { font-family: "Poppins", sans-serif; font-size: 1.1rem; color: #d9402f; }
+
+/* En pantallas grandes la vista previa queda visible al hacer scroll */
+@media (min-width: 992px) {
+  .np-app aside { position: sticky; top: 0; align-self: flex-start; }
+}
+
+/* ---------- Pantallas chicas ---------- */
+@media (max-width: 576px) {
+  .np-app { padding: 16px 14px 24px !important; }
+  .np-titulo { font-size: 1.35rem !important; }
+  .np-card .card-body { padding: 1rem !important; }
+  .np-preview { max-width: 100%; }
+}

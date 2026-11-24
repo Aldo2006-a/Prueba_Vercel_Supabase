@@ -1,92 +1,18 @@
 // src\pages\PagesComensal\LocalesComensal\LocalesComensal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ResenasLocal from './ResenasLocal';
+import {
+  obtenerLocales,
+  obtenerCartaLocal,
+  localALista,
+  productoAComensal,
+  categoriasDeCarta,
+} from '../../../api/locales';
+import { mensajeDeError } from '../../../api/carta';
 import './LocalesComensal.css';
 
-// 1. DATOS DE LOCALES DEL CAMPUS
-const DATA_LOCALES = [
-  { 
-    id: 1, 
-    nombre: "Cafetería Central", 
-    estado: "Abierto", 
-    ubicacion: "Pabellón A, primer piso · 07:00 a 19:00", 
-    tiempoPrep: "12 min de preparación · 4.6 ★", 
-    calificacion: 4.6,
-    aperturaProx: "07:00"
-  },
-  { 
-    id: 2, 
-    nombre: "Sanguchería pabellón E", 
-    estado: "Abierto", 
-    ubicacion: "Pabellón E, primer piso · 08:00 a 18:00", 
-    tiempoPrep: "10 min de preparación · 4.3 ★", 
-    calificacion: 4.3,
-    aperturaProx: "08:00"
-  },
-  { 
-    id: 3, 
-    nombre: "Café de Biblioteca", 
-    estado: "Abierto", 
-    ubicacion: "Biblioteca, piso 1 · 08:00 a 20:00", 
-    tiempoPrep: "6 min de preparación · 4.8 ★", 
-    calificacion: 4.8,
-    aperturaProx: "08:00"
-  },
-  { 
-    id: 4, 
-    nombre: "Menú Universitario N", 
-    estado: "Abierto", 
-    ubicacion: "Pabellón N, patio norte · 11:30 a 15:00", 
-    tiempoPrep: "15 min de preparación · 4.5 ★", 
-    calificacion: 4.5,
-    aperturaProx: "11:30"
-  },
-  { 
-    id: 5, 
-    nombre: "Juguería La Fuente", 
-    estado: "Cerrado", 
-    ubicacion: "Patio central · abre mañana 09:00", 
-    tiempoPrep: "8 min de preparación · 4.5 ★", 
-    calificacion: 4.5,
-    aperturaProx: "09:00"
-  }
-];
-
-// 2. PRODUCTOS DE LA CAFETERÍA
-const PRODUCTOS_CAFETERIA = [
-  {
-    id: "p1",
-    nombre: "Sándwich de pollo deshilachado",
-    descripcion: "Pan francés, pollo deshilachado y salsa criolla.",
-    precio: 9.50,
-    categoria: "Desayunos",
-    agotado: false,
-    opciones: {
-      tipoPan: [
-        { id: "f", nombre: "Pan francés", precio: 0 },
-        { id: "c", nombre: "Pan ciabatta", precio: 1.00 },
-        { id: "i", nombre: "Pan integral", precio: 1.50 }
-      ],
-      paraLlevar: [
-        { id: "local", nombre: "En el local", precio: 0 },
-        { id: "llevar", nombre: "Empaque para llevar", precio: 0.50 }
-      ],
-      agregados: [
-        { id: "queso", nombre: "Agregar queso", precio: 2.00 },
-        { id: "palta", nombre: "Palta extra", precio: 2.50 },
-        { id: "doble", nombre: "Doble porción de pollo", precio: 4.00 }
-      ]
-    }
-  },
-  { id: "p2", nombre: "Pan con palta", descripcion: "Pan ciabatta, palta fuerte y tomate.", precio: 8.50, categoria: "Desayunos", agotado: false },
-  { id: "p3", nombre: "Tostadas con mermelada", descripcion: "Pan de molde, mermelada de fresa y mantequilla.", precio: 5.50, categoria: "Desayunos", agotado: false },
-  { id: "p4", nombre: "Café pasado", descripcion: "Café de Chanchamayo, taza de 8 oz.", precio: 3.50, categoria: "Desayunos", agotado: false },
-  { id: "p5", nombre: "Ensalada de frutas", descripcion: "Frutas de estación picadas.", precio: 7.00, categoria: "Desayunos", agotado: true },
-  { id: "p6", nombre: "Jugo surtido", descripcion: "Papaya, plátano y naranja licuados al momento.", precio: 6.50, categoria: "Desayunos", agotado: false },
-  { id: "p7", nombre: "Chicha morada", descripcion: "Vaso de 16 oz, endulzada al momento.", precio: 4.50, categoria: "Desayunos", agotado: false },
-  { id: "p8", nombre: "Empanada de carne", descripcion: "Masa casera con carne y aceituna.", precio: 5.00, categoria: "Desayunos", agotado: true }
-];
+// Los locales y sus cartas vienen de la API (ver src/api/locales.js)
 
 export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) {
   const navigate = useNavigate();
@@ -95,9 +21,23 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
   const [esTodosCerrados, setEsTodosCerrados] = useState(false);
   const [localSeleccionado, setLocalSeleccionado] = useState(null);
   const [busquedaCarta, setBusquedaCarta] = useState("");
-  const [categoriaActiva, setCategoriaActiva] = useState("Desayunos");
+  const [categoriaActiva, setCategoriaActiva] = useState("");
   const [soloAbiertos, setSoloAbiertos] = useState(false);
   const [localResenas, setLocalResenas] = useState(null);
+
+  // Datos reales (API)
+  const [locales, setLocales] = useState([]);
+  const [cargandoLocales, setCargandoLocales] = useState(true);
+  const [productos, setProductos] = useState([]);
+  const [cargandoCarta, setCargandoCarta] = useState(false);
+  const [errorApi, setErrorApi] = useState("");
+
+  useEffect(() => {
+    obtenerLocales()
+      .then((lista) => setLocales(lista.map(localALista)))
+      .catch((e) => setErrorApi(mensajeDeError(e, "No se pudieron cargar los locales.")))
+      .finally(() => setCargandoLocales(false));
+  }, []);
 
   // Estados Modal Detalle de Producto
   const [productoDetalle, setProductoDetalle] = useState(null);
@@ -109,18 +49,39 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
   const [errorObligatorio, setErrorObligatorio] = useState(false);
 
   // Filtrado de Locales
-  const localesVisibles = soloAbiertos ? DATA_LOCALES.filter((l) => l.estado === "Abierto") : DATA_LOCALES;
+  const localesVisibles = soloAbiertos ? locales.filter((l) => l.estado === "Abierto") : locales;
+  const abiertos = locales.filter((l) => l.estado === "Abierto").length;
+  const cerrados = locales.length - abiertos;
 
-  // Filtrado de Productos por Búsqueda
-  const productosFiltrados = PRODUCTOS_CAFETERIA.filter((p) =>
-    p.nombre.toLowerCase().includes(busquedaCarta.toLowerCase()) ||
-    p.descripcion.toLowerCase().includes(busquedaCarta.toLowerCase())
+  // Categorías de la carta (en el orden del local) y filtrado de productos:
+  // con texto en el buscador se busca en toda la carta; sin texto, solo en la categoría activa
+  const categoriasCarta = categoriasDeCarta(productos);
+  const textoBusqueda = busquedaCarta.trim().toLowerCase();
+  const productosFiltrados = productos.filter((p) =>
+    textoBusqueda
+      ? p.nombre.toLowerCase().includes(textoBusqueda) ||
+        p.descripcion.toLowerCase().includes(textoBusqueda)
+      : p.categoria === categoriaActiva
   );
 
-  const handleVerCarta = (local) => {
+  // Abre la carta de un local: pide sus productos a la API
+  const handleVerCarta = async (local) => {
     setLocalSeleccionado(local);
     setBusquedaCarta("");
-    setCategoriaActiva("Desayunos");
+    setProductos([]);
+    setCategoriaActiva("");
+    setErrorApi("");
+    setCargandoCarta(true);
+
+    try {
+      const lista = (await obtenerCartaLocal(local.id)).map(productoAComensal);
+      setProductos(lista);
+      setCategoriaActiva(categoriasDeCarta(lista)[0] || "");
+    } catch (e) {
+      setErrorApi(mensajeDeError(e, "No se pudo cargar la carta del local."));
+    } finally {
+      setCargandoCarta(false);
+    }
   };
 
   const handleAbrirDetalle = (prod) => {
@@ -230,7 +191,7 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
           <div className="proximas-aperturas">
             <h3 className="section-title">Próximas aperturas (mañana)</h3>
             <div className="proximas-grid">
-              {DATA_LOCALES.map((loc) => (
+              {locales.map((loc) => (
                 <div key={loc.id} className="proxima-card">
                   <div className="proxima-thumb"></div>
                   <div>
@@ -249,7 +210,8 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
             <div>
               <h1 className="locales-title">Locales del campus</h1>
               <p className="locales-subtitle">
-                {DATA_LOCALES.filter((l) => l.estado === "Abierto").length} locales abiertos ahora · 1 cerrado · sede Monterrico
+                {abiertos} {abiertos === 1 ? "local abierto" : "locales abiertos"} ahora
+                {cerrados > 0 ? ` · ${cerrados} ${cerrados === 1 ? "cerrado" : "cerrados"}` : ""} · sede Monterrico
               </p>
             </div>
             <div className="locales-filter-controls">
@@ -270,6 +232,12 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
             </div>
           </div>
 
+          {errorApi && <div className="alert-obligatorio">{errorApi}</div>}
+          {cargandoLocales && <p className="locales-subtitle">Cargando locales…</p>}
+          {!cargandoLocales && !errorApi && locales.length === 0 && (
+            <p className="locales-subtitle">Todavía no hay locales disponibles.</p>
+          )}
+
           <div className="locales-grid">
             {localesVisibles.map((local) => {
               const esCerrado = local.estado === "Cerrado";
@@ -285,7 +253,7 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                     </div>
                     <p className="local-location-info">{local.ubicacion}</p>
                     <p className="local-time-rating">
-                      {local.tiempoPrep} ·{" "}
+                      {local.tiempoPrep ? `${local.tiempoPrep} · ` : ""}
                       <button className="btn-link-resenas" onClick={() => setLocalResenas(local)}>
                         Ver reseñas
                       </button>
@@ -329,7 +297,7 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                   <span className="status-pill pill-open">Abierto</span>
                 </div>
                 <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "4px 0 0" }}>
-                  Pabellón A, primer piso · cierra 19:00 · 12 min de preparación · 4.6 ★ (128)
+                  {localSeleccionado.ubicacion || "Campus"}
                 </p>
               </div>
             </div>
@@ -340,7 +308,7 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
 
           {/* Categorías */}
           <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "8px", marginBottom: "16px" }}>
-            {["Desayunos", "Sándwiches", "Menú del día", "Jugos y bebidas", "Snacks", "Postres", "Café"].map((cat) => (
+            {categoriasCarta.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategoriaActiva(cat)}
@@ -372,8 +340,22 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
             />
           </div>
 
-          {/* CASO: BUSCADOR SIN RESULTADOS */}
-          {productosFiltrados.length === 0 ? (
+          {/* CARGANDO / ERROR / LOCAL SIN PRODUCTOS */}
+          {cargandoCarta ? (
+            <p className="locales-subtitle">Cargando carta…</p>
+          ) : errorApi ? (
+            <div className="alert-obligatorio">{errorApi}</div>
+          ) : productos.length === 0 ? (
+            <div className="sin-resultados-card">
+              <div className="question-circle">?</div>
+              <h3 className="section-title" style={{ margin: "0 0 8px 0" }}>
+                Este local aún no tiene productos
+              </h3>
+              <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>
+                Vuelve más tarde para ver su carta.
+              </p>
+            </div>
+          ) : productosFiltrados.length === 0 ? (
             <div className="sin-resultados-card">
               <div className="question-circle">?</div>
               <h3 className="section-title" style={{ margin: "0 0 8px 0" }}>
@@ -460,7 +442,10 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                   <div style={{ height: "200px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", borderRadius: "var(--radius-card)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
                     foto 1:1
                   </div>
-                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "12px" }}>Cafetería Central · 8 min de preparación · 4.9 ★ (62)</p>
+                  <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "12px" }}>
+                    {localSeleccionado?.nombre}
+                    {productoDetalle.tiempoPrep ? ` · ${productoDetalle.tiempoPrep} min de preparación` : ""}
+                  </p>
                 </div>
 
                 <div>
@@ -543,20 +528,20 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                           </label>
                         ))}
                       </div>
-
-                      {/* NOTA PARA EL LOCAL */}
-                      <div className="group-box">
-                        <label className="field-label" style={{ display: "block", marginBottom: "8px" }}>NOTA PARA EL LOCAL</label>
-                        <textarea
-                          className="nota-textarea"
-                          placeholder="Sin cebolla, por favor."
-                          maxLength={120}
-                          value={nota}
-                          onChange={(e) => setNota(e.target.value)}
-                        />
-                      </div>
                     </div>
                   )}
+
+                  {/* NOTA PARA EL LOCAL */}
+                  <div className="group-box">
+                    <label className="field-label" style={{ display: "block", marginBottom: "8px" }}>NOTA PARA EL LOCAL</label>
+                    <textarea
+                      className="nota-textarea"
+                      placeholder="Sin cebolla, por favor."
+                      maxLength={120}
+                      value={nota}
+                      onChange={(e) => setNota(e.target.value)}
+                    />
+                  </div>
 
                   {/* BOTTOM BAR DE ACCIÓN */}
                   <div className="modal-bottom-bar">

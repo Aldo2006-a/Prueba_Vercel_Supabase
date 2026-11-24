@@ -61,6 +61,11 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
   const [pagina, setPagina] = useState(1);
 
   const totalCalificaciones = DISTRIBUCION.reduce((acc, d) => acc + d.cantidad, 0);
+
+  // Las reseñas aún son de ejemplo: si el local no trae calificación, se usa el promedio de la distribución de ejemplo
+  const calificacion =
+    local.calificacion ??
+    DISTRIBUCION.reduce((acc, d) => acc + d.estrellas * d.cantidad, 0) / totalCalificaciones;
   const maxCantidad = Math.max(...DISTRIBUCION.map((d) => d.cantidad));
 
   const filtroActivo = FILTROS.find((f) => f.id === filtro);
@@ -95,8 +100,8 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
         {/* COLUMNA IZQUIERDA: RESUMEN */}
         <aside>
           <div className="resenas-card resenas-score-card">
-            <span className="resenas-score">{local.calificacion.toFixed(1)}</span>
-            <Estrellas valor={local.calificacion} className="resenas-stars--lg" />
+            <span className="resenas-score">{calificacion.toFixed(1)}</span>
+            <Estrellas valor={calificacion} className="resenas-stars--lg" />
             <span className="resenas-score-count">{totalCalificaciones} calificaciones</span>
           </div>
 

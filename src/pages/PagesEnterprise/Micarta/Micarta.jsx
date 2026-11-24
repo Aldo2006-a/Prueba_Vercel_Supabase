@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Micarta.css';
+import {
+  obtenerCategorias,
+  obtenerProductos,
+  crearCategoria,
+  eliminarCategoria,
+  eliminarProducto,
+  productoACarta,
+  tiempoAFormulario,
+  mensajeDeError,
+} from '../../../api/carta';
 
 /* ==========================================================================
    Utilidades
@@ -308,169 +318,65 @@ const CategoriasModal = ({ categories, productsData, onSave, onCancel }) => {
 const Micarta = () => {
   const navigate = useNavigate();
 
-  // Lista de Categorías (ahora es estado para poder agregar y eliminar)
-  const [categories, setCategories] = useState([
-    { id: 'desayunos', name: 'Desayunos' },
-    { id: 'sandwiches', name: 'Sándwiches' },
-    { id: 'menu_dia', name: 'Menú del día' },
-    { id: 'jugos', name: 'Jugos y bebidas' },
-    { id: 'snacks', name: 'Snacks' },
-    { id: 'postres', name: 'Postres' },
-    { id: 'cafe', name: 'Café' },
-  ]);
+  // Categorías y productos reales del local (vienen de la base de datos)
+  const [categories, setCategories] = useState([]);
+  const [productsData, setProductsData] = useState({});
+  const [cargando, setCargando] = useState(true);
+  const [errorCarta, setErrorCarta] = useState('');
 
   // Ventana emergente de categorías
   const [isCategoriesModalOpen, setIsCategoriesModalOpen] = useState(false);
 
-  // Categoría activa por defecto
-  const [activeCategory, setActiveCategory] = useState('desayunos');
+  // Categoría activa (se define al cargar la carta)
+  const [activeCategory, setActiveCategory] = useState(null);
 
   // Filtros de búsqueda y disponibilidad
   const [searchTerm, setSearchTerm] = useState('');
   const [availabilityFilter, setAvailabilityFilter] = useState('todas');
 
-  // Base de datos de productos por categoría
-  const [productsData, setProductsData] = useState({
-    desayunos: [
-      {
-        id: 1,
-        name: 'Sándwich de pollo deshilachado',
-        desc: 'Pan francés, pollo deshilachado y salsa criolla · 8 min · 3 grupos de opciones',
-        status: 'Disponible',
-        price: '9.50',
-      },
-      {
-        id: 2,
-        name: 'Pan con palta',
-        desc: 'Pan ciabatta, palta fuerte y tomate · 6 min · 1 grupo de opciones',
-        status: 'Disponible',
-        price: '8.50',
-      },
-      {
-        id: 3,
-        name: 'Ensalada de frutas',
-        desc: 'Papaya, piña, plátano y miel · 5 min',
-        status: 'Agotado',
-        price: '7.00',
-      },
-      {
-        id: 4,
-        name: 'Tostadas con mermelada',
-        desc: 'Pan de molde, mermelada de fresa y mantequilla · 4 min',
-        status: 'Disponible',
-        price: '5.50',
-      },
-      {
-        id: 5,
-        name: 'Café pasado',
-        desc: 'Café de Chanchamayo, taza de 8 oz · 3 min · 2 grupos de opciones',
-        status: 'Disponible',
-        price: '3.50',
-      },
-    ],
-    sandwiches: [
-      {
-        id: 6,
-        name: 'Sándwich Club',
-        desc: 'Pan de molde, jamón, queso, huevo y pollo · 10 min',
-        status: 'Disponible',
-        price: '12.00',
-      },
-      {
-        id: 7,
-        name: 'Triple de Huevo y Palta',
-        desc: 'Pan de molde, huevo sancochado y palta · 5 min',
-        status: 'Disponible',
-        price: '7.50',
-      },
-      {
-        id: 8,
-        name: 'Sándwich de Jamón y Queso',
-        desc: 'Pan ciabatta tostado con mantequilla · 4 min',
-        status: 'Agotado',
-        price: '8.00',
-      },
-      {
-        id: 9,
-        name: 'Mixto Especial',
-        desc: 'Pan de molde con doble queso derretido · 6 min',
-        status: 'Disponible',
-        price: '8.50',
-      },
-    ],
-    menu_dia: [
-      {
-        id: 10,
-        name: 'Menú Ejecutivo',
-        desc: 'Entrada + Segundo + Refresco de chicha · 15 min',
-        status: 'Disponible',
-        price: '15.00',
-      },
-      {
-        id: 11,
-        name: 'Menú Económico Universitario',
-        desc: 'Plato de fondo + Sopa del día · 10 min',
-        status: 'Disponible',
-        price: '12.00',
-      },
-    ],
-    jugos: [
-      {
-        id: 12,
-        name: 'Jugo de Fresa con Leche',
-        desc: 'Fresa fresca, leche entera · 5 min',
-        status: 'Disponible',
-        price: '6.50',
-      },
-      {
-        id: 13,
-        name: 'Jugo Surtido',
-        desc: 'Papaya, piña, plátano y manzana · 5 min',
-        status: 'Disponible',
-        price: '6.00',
-      },
-      {
-        id: 14,
-        name: 'Jugo de Papaya',
-        desc: 'Papaya endulzada con miel o azúcar · 4 min',
-        status: 'Agotado',
-        price: '5.50',
-      },
-      {
-        id: 15,
-        name: 'Limonada Frozen 16 oz',
-        desc: 'Limón recién exprimido con hielo frappé · 3 min',
-        status: 'Disponible',
-        price: '5.00',
-      },
-    ],
-    snacks: [
-      {
-        id: 16,
-        name: 'Galletas de Avena',
-        desc: 'Paquete de 2 unidades artesanal · 1 min',
-        status: 'Disponible',
-        price: '3.00',
-      },
-      {
-        id: 17,
-        name: 'Barra de Cereal y Frutos Secos',
-        desc: 'Avena, miel, almendras y pasas · 1 min',
-        status: 'Disponible',
-        price: '3.50',
-      },
-    ],
-    postres: [
-      {
-        id: 18,
-        name: 'Pie de Limón',
-        desc: 'Porción individual de la casa · 2 min',
-        status: 'Disponible',
-        price: '6.00',
-      },
-    ],
-    cafe: [],
-  });
+  // Lee de la API las categorías y los productos, y los agrupa por categoría
+  const cargarCarta = async () => {
+    try {
+      const [cats, prods] = await Promise.all([obtenerCategorias(), obtenerProductos()]);
+
+      const agrupados = {};
+      cats.forEach((c) => {
+        agrupados[c.id] = [];
+      });
+      prods.forEach((p) => {
+        if (agrupados[p.category_id]) agrupados[p.category_id].push(productoACarta(p));
+      });
+
+      setCategories(cats.map((c) => ({ id: c.id, name: c.name })));
+      setProductsData(agrupados);
+      setActiveCategory((actual) =>
+        cats.some((c) => c.id === actual) ? actual : cats.length > 0 ? cats[0].id : null
+      );
+    } catch (error) {
+      setErrorCarta(mensajeDeError(error, 'No se pudo cargar tu carta.'));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarCarta();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Producto que se está por quitar (null = ninguna confirmación abierta)
+  const [productoAQuitar, setProductoAQuitar] = useState(null);
+  const [quitando, setQuitando] = useState(false);
+
+  // Escape cierra la confirmación
+  useEffect(() => {
+    if (!productoAQuitar) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setProductoAQuitar(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [productoAQuitar]);
 
   // Nombre de la categoría activa
   const currentCategoryObj = categories.find((c) => c.id === activeCategory);
@@ -512,59 +418,103 @@ const Micarta = () => {
   };
 
   // Aplica los cambios hechos en la ventana emergente
-  const handleGuardarCategorias = (nuevasCategorias) => {
-    const idsConservados = new Set(nuevasCategorias.map((c) => c.id));
+  const handleGuardarCategorias = async (nuevasCategorias) => {
+    setIsCategoriesModalOpen(false);
+    setErrorCarta('');
 
-    // Los productos de las categorías eliminadas se descartan
-    setProductsData((prev) => {
-      const siguiente = {};
-      Object.keys(prev).forEach((id) => {
-        if (idsConservados.has(id)) siguiente[id] = prev[id];
-      });
-      return siguiente;
-    });
+    const idsActuales = new Set(categories.map((c) => c.id));
+    const idsNuevos = new Set(nuevasCategorias.map((c) => c.id));
+    const eliminadas = categories.filter((c) => !idsNuevos.has(c.id));
+    const agregadas = nuevasCategorias.filter((c) => !idsActuales.has(c.id));
 
-    setCategories(nuevasCategorias);
+    try {
+      // Al eliminar una categoría también se quitan sus productos (como avisa la ventana)
+      for (const categoria of eliminadas) {
+        for (const producto of productsData[categoria.id] || []) {
+          await eliminarProducto(producto.id);
+        }
+        await eliminarCategoria(categoria.id);
+      }
 
-    // Si la categoría activa fue eliminada, pasa a la primera que quede
-    if (!idsConservados.has(activeCategory)) {
-      handleCambiarCategoria(nuevasCategorias.length > 0 ? nuevasCategorias[0].id : null);
+      for (const [i, categoria] of agregadas.entries()) {
+        await crearCategoria(categoria.name, categories.length + i);
+      }
+    } catch (error) {
+      setErrorCarta(mensajeDeError(error, 'No se pudieron guardar los cambios de categorías.'));
     }
 
-    setIsCategoriesModalOpen(false);
+    // Se vuelve a leer la carta para mostrar exactamente lo que quedó guardado
+    setSearchTerm('');
+    setAvailabilityFilter('todas');
+    await cargarCarta();
   };
 
   // Lleva al formulario en modo edición, con los datos del producto ya cargados
   const handleEditarProducto = (product) => {
-    // La descripción de la carta viene como "ingredientes · 8 min · 3 grupos de opciones"
-    const partes = product.desc.split(' · ');
-    const tiempoParte = partes.find((p) => /^\d+\s*min$/.test(p));
+    const real = product.raw;
 
     navigate('/enterprises/NuevoProducto', {
       state: {
         producto: {
           id: product.id,
-          nombre: product.name,
-          descripcion: partes[0],
+          nombre: real.name,
+          descripcion: real.description ?? '',
           categoria: currentCategoryName,
           precio: product.price,
-          tiempo: tiempoParte ? tiempoParte.replace('min', 'minutos') : '',
+          tiempo: tiempoAFormulario(real.preparation_time),
           disponibilidad: product.status,
         },
       },
     });
   };
 
-  // Quita el producto de la categoría activa
-  const handleQuitarProducto = (id) => {
-    setProductsData((prev) => ({
-      ...prev,
-      [activeCategory]: prev[activeCategory].filter((p) => p.id !== id),
-    }));
+  // Confirma y elimina el producto de la base de datos
+  const handleConfirmarQuitar = async () => {
+    if (!productoAQuitar) return;
+
+    setQuitando(true);
+    setErrorCarta('');
+
+    try {
+      await eliminarProducto(productoAQuitar.id);
+      setProductsData((prev) => ({
+        ...prev,
+        [activeCategory]: prev[activeCategory].filter((p) => p.id !== productoAQuitar.id),
+      }));
+    } catch (error) {
+      setErrorCarta(mensajeDeError(error, 'No se pudo quitar el producto.'));
+    }
+
+    setQuitando(false);
+    setProductoAQuitar(null);
   };
+
+  if (cargando) {
+    return (
+      <div className="micarta-container container-fluid p-4 text-muted">
+        Cargando tu carta…
+      </div>
+    );
+  }
 
   return (
     <div className="micarta-container container-fluid p-4">
+      {/* Aviso de error (carga, guardado o eliminación) */}
+      {errorCarta && (
+        <div
+          className="alert alert-danger d-flex justify-content-between align-items-center"
+          role="alert"
+        >
+          <span>{errorCarta}</span>
+          <button
+            type="button"
+            className="btn-close"
+            aria-label="Cerrar aviso"
+            onClick={() => setErrorCarta('')}
+          ></button>
+        </div>
+      )}
+
       {/* Miga de pan / Breadcrumb */}
       <nav aria-label="breadcrumb" className="mb-2">
         <ol className="breadcrumb micarta-breadcrumb mb-1">
@@ -757,7 +707,7 @@ const Micarta = () => {
                             <button
                               type="button"
                               className="btn btn-link p-0 action-link text-decoration-none ms-1"
-                              onClick={() => handleQuitarProducto(product.id)}
+                              onClick={() => setProductoAQuitar(product)}
                             >
                               Quitar
                             </button>
@@ -796,6 +746,63 @@ const Micarta = () => {
           )}
         </div>
       </div>
+
+      {/* Confirmación para quitar un producto */}
+      {productoAQuitar && (
+        <div className="cat-modal-backdrop">
+          <div
+            className="cat-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="quitar-producto-title"
+          >
+            <div className="cat-modal__header">
+              <div>
+                <h2 id="quitar-producto-title" className="cat-modal__title">
+                  Quitar producto
+                </h2>
+                <p className="cat-modal__subtitle">Esta acción no se puede deshacer.</p>
+              </div>
+              <button
+                type="button"
+                className="cat-modal__close"
+                aria-label="Cancelar"
+                onClick={() => setProductoAQuitar(null)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="cat-modal__body">
+              <p className="mb-0">
+                ¿Seguro que quieres quitar «{productoAQuitar.name}» de tu carta?
+              </p>
+            </div>
+
+            <div className="cat-modal__footer">
+              <span></span>
+              <div className="d-flex gap-2">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary custom-btn-category fw-semibold"
+                  onClick={() => setProductoAQuitar(null)}
+                  disabled={quitando}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn cat-btn-danger cat-btn-danger--solid fw-semibold"
+                  onClick={handleConfirmarQuitar}
+                  disabled={quitando}
+                >
+                  {quitando ? 'Quitando…' : 'Sí, quitar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Ventana emergente de categorías (se monta al abrir, así siempre parte de los datos actuales) */}
       {isCategoriesModalOpen && (
