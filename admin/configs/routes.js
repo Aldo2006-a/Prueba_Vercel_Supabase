@@ -5,6 +5,8 @@ import { Router } from 'express';
 import * as owners from '../controllers/owner_controllers.js';
 import * as enterprises from '../controllers/enterprise_controllers.js';
 import * as comensales from '../controllers/comensal_controllers.js';
+import * as roleApis from '../apis/roles_apis.js';
+import * as userApis from '../apis/users_apis.js';
 import { requireRole } from '../../configs/middlewares.js';
 
 const router = Router();
@@ -48,6 +50,12 @@ router.get([
   '/comensales/micuenta',
   '/comensales/carrito',
 ], requireRole('comensal'), comensales.panel);
+
+// api roles y users (solo owner)
+router.get('/api/v1/roles', requireRole('owner'), roleApis.listRoles);
+router.get('/api/v1/roles/:id', requireRole('owner'), roleApis.getRoleById);
+router.get('/api/v1/users', requireRole('owner'), userApis.listUsers);
+router.get('/api/v1/users/:id', requireRole('owner'), userApis.getUserById);
 
 router.post('/enterprises/logout', enterprises.salir);
 router.post('/comensales/logout', comensales.salir);
