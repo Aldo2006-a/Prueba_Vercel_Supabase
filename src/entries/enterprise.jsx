@@ -24,6 +24,7 @@ import Resenas from '../pages/PagesEnterprise/Resenas/Resenas';
 
 // 3. CSS base
 import './enterprise.css';
+import './enterprise-ui.css';
 
 function EnterpriseApp() {
   return (
