@@ -2,17 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { obtenerMiPerfil } from '../../../../api/locales'
 import './HeaderComensal.css'
 
 export default function HeaderComensal({ cantidadItems = 0 }) {
-  const [localSeleccionado, setLocalSeleccionado] = useState('Cafetería Central')
   const [busqueda, setBusqueda] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const menuRef = useRef(null)
 
   const cantidadCarrito = cantidadItems
-  const nombreUsuario = 'Mateo'
-  const inicialesUsuario = 'MR'
+  const [perfil, setPerfil] = useState(null)
+  const nombreUsuario = perfil ? perfil.name : ''
+  const inicialesUsuario = perfil ? perfil.initials : ''
+
+  // Nombre real de la cuenta en sesión
+  useEffect(() => {
+    obtenerMiPerfil().then(setPerfil).catch(() => setPerfil(null))
+  }, [])
 
   // Cierra el menú al hacer clic fuera o al presionar Escape
   useEffect(() => {
@@ -35,24 +41,11 @@ export default function HeaderComensal({ cantidadItems = 0 }) {
   return (
     <header className="comensal-header">
       <div className="comensal-navbar">
-        {/* IZQUIERDA: Logotipo y selector de local */}
+        {/* IZQUIERDA: Logotipo */}
         <div className="comensal-navbar__left">
           <Link className="comensal-navbar__brand" to="/comensales/localescomensal">
             Campus Pide
           </Link>
-
-          <div className="comensal-navbar__select-wrapper">
-            <select
-              className="comensal-navbar__select"
-              value={localSeleccionado}
-              onChange={(e) => setLocalSeleccionado(e.target.value)}
-            >
-              <option value="Cafetería Central">Cafetería Central</option>
-              <option value="Sanguchería Pabellón E">Sanguchería Pabellón E</option>
-              <option value="Café de Biblioteca">Café de Biblioteca</option>
-            </select>
-            <span className="comensal-navbar__select-chevron">▾</span>
-          </div>
         </div>
 
         {/* CENTRO: Buscador */}

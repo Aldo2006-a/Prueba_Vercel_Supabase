@@ -10,15 +10,16 @@ import {
   categoriasDeCarta,
 } from '../../../api/locales';
 import { mensajeDeError } from '../../../api/carta';
+import { agregarAlCarrito, vaciarCarrito, ahoraEnLima } from '../../../api/pedidos';
 import './LocalesComensal.css';
 
 // Los locales y sus cartas vienen de la API (ver src/api/locales.js)
 
-export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) {
+export default function LocalesComensal({ setCarrito }) {
   const navigate = useNavigate();
 
   // Estados de Filtros y Navegación
-  const [esTodosCerrados, setEsTodosCerrados] = useState(false);
+  const [verTodos, setVerTodos] = useState(false);
   const [localSeleccionado, setLocalSeleccionado] = useState(null);
   const [busquedaCarta, setBusquedaCarta] = useState("");
   const [categoriaActiva, setCategoriaActiva] = useState("");
@@ -47,11 +48,20 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
   const [cantidad, setCantidad] = useState(1);
   const [nota, setNota] = useState("");
   const [errorObligatorio, setErrorObligatorio] = useState(false);
+  const [agregando, setAgregando] = useState(false);
+  const [errorAgregar, setErrorAgregar] = useState("");
 
   // Filtrado de Locales
-  const localesVisibles = soloAbiertos ? locales.filter((l) => l.estado === "Abierto") : locales;
+  // Los locales abiertos van primero; los cerrados quedan atenuados al final
+  const ordenados = [...locales].sort((a, b) => (a.estado === "Abierto" ? 0 : 1) - (b.estado === "Abierto" ? 0 : 1));
+  const localesVisibles = soloAbiertos ? ordenados.filter((l) => l.estado === "Abierto") : ordenados;
   const abiertos = locales.filter((l) => l.estado === "Abierto").length;
   const cerrados = locales.length - abiertos;
+  const esTodosCerrados = !cargandoLocales && locales.length > 0 && abiertos === 0 && !verTodos;
+  const horaAhora = (() => {
+    const m = ahoraEnLima().minutos;
+    return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  })();
 
   // Categorías de la carta (en el orden del local) y filtrado de productos:
   // con texto en el buscador se busca en toda la carta; sin texto, solo en la categoría activa
@@ -92,6 +102,7 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
     setCantidad(1);
     setNota("");
     setErrorObligatorio(false);
+    setErrorAgregar("");
   };
 
   const handleToggleAgregado = (id) => {
@@ -121,28 +132,44 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
     return (base * cantidad).toFixed(2);
   };
 
-  const handleAgregarAlCarrito = () => {
+  const handleAgregarAlCarrito = async () => {
     if (productoDetalle?.opciones?.tipoPan && !panElegido) {
       setErrorObligatorio(true);
       return;
     }
 
-    if (setItemsCarrito) {
-      const precioBase = parseFloat(calcularTotalProducto());
-      const nuevoItem = {
-        id: Date.now(),
-        nombre: productoDetalle.nombre,
-        detalles: `${panElegido ? "Pan " + panElegido + " · " : ""}${paraLlevarElegido === "llevar" ? "Para llevar" : "En el local"}`,
-        nota: nota,
-        cantidad: cantidad,
-        precioUnitario: precioBase / cantidad,
-        subtotal: precioBase
-      };
-      setItemsCarrito([...itemsCarrito, nuevoItem]);
-    }
+    setAgregando(true);
+    setErrorAgregar("");
 
-    setProductoDetalle(null);
-    navigate("/comensales/carrito");
+    const datos = { product_id: productoDetalle.id, quantity: cantidad, notes: nota };
+
+    try {
+      let carritoActual;
+      try {
+        carritoActual = await agregarAlCarrito(datos);
+      } catch (e) {
+        // El carrito es de un solo local: si tiene productos de otro, se ofrece vaciarlo
+        if (e?.response?.data?.error === "CART_OTHER_STORE") {
+          const vaciar = window.confirm(`${e.response.data.message}.\n\n¿Vaciar el carrito y agregar este producto?`);
+          if (!vaciar) {
+            setAgregando(false);
+            return;
+          }
+          await vaciarCarrito();
+          carritoActual = await agregarAlCarrito(datos);
+        } else {
+          throw e;
+        }
+      }
+
+      setCarrito(carritoActual);
+      setProductoDetalle(null);
+      navigate("/comensales/carrito");
+    } catch (e) {
+      setErrorAgregar(mensajeDeError(e, "No se pudo agregar el producto al carrito."));
+    } finally {
+      setAgregando(false);
+    }
   };
 
   // VISTA RESEÑAS DEL LOCAL
@@ -170,16 +197,16 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
       {esTodosCerrados ? (
         <div>
           <h1 className="locales-title">Locales del campus</h1>
-          <p className="locales-subtitle">Ningún local recibe pedidos en este momento · 22:40</p>
+          <p className="locales-subtitle">Ningún local recibe pedidos en este momento · {horaAhora}</p>
 
           <div className="empty-state-box">
             <div className="clock-icon-circle">⏰</div>
             <h2 className="section-title" style={{ margin: "0 0 8px 0" }}>Ningún local está abierto ahora</h2>
             <p style={{ color: "var(--text-muted)", fontSize: "14px", margin: 0 }}>
-              Los locales del campus reciben pedidos desde las 07:00. Puedes revisar las cartas mientras tanto y pedir en cuanto abran.
+              Puedes revisar los locales mientras tanto y pedir en cuanto abran.
             </p>
             <div className="empty-actions">
-              <button className="btn-primary-action" onClick={() => setEsTodosCerrados(false)}>
+              <button className="btn-primary-action" onClick={() => setVerTodos(true)}>
                 Ver cartas de todos los locales
               </button>
               <button className="btn-secondary-action">
@@ -189,14 +216,14 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
           </div>
 
           <div className="proximas-aperturas">
-            <h3 className="section-title">Próximas aperturas (mañana)</h3>
+            <h3 className="section-title">Próximas aperturas</h3>
             <div className="proximas-grid">
               {locales.map((loc) => (
                 <div key={loc.id} className="proxima-card">
                   <div className="proxima-thumb"></div>
                   <div>
                     <h4 className="product-title" style={{ margin: 0 }}>{loc.nombre}</h4>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>Abre a las {loc.aperturaProx}</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{loc.aperturaProx ? `Abre ${loc.aperturaProx}` : "Sin horario por ahora"}</span>
                   </div>
                 </div>
               ))}
@@ -253,6 +280,7 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                     </div>
                     <p className="local-location-info">{local.ubicacion}</p>
                     <p className="local-time-rating">
+                      {esCerrado && local.aperturaProx ? `Abre ${local.aperturaProx} · ` : ""}
                       {local.tiempoPrep ? `${local.tiempoPrep} · ` : ""}
                       <button className="btn-link-resenas" onClick={() => setLocalResenas(local)}>
                         Ver reseñas
@@ -543,6 +571,8 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                     />
                   </div>
 
+                  {errorAgregar && <div className="alert-obligatorio">{errorAgregar}</div>}
+
                   {/* BOTTOM BAR DE ACCIÓN */}
                   <div className="modal-bottom-bar">
                     <div className="counter-box">
@@ -551,8 +581,8 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
                       <button onClick={() => setCantidad(cantidad + 1)}>+</button>
                     </div>
 
-                    <button className="btn-primary-action" style={{ flex: 1 }} onClick={handleAgregarAlCarrito}>
-                      Agregar al carrito · S/ {calcularTotalProducto()}
+                    <button className="btn-primary-action" style={{ flex: 1 }} onClick={handleAgregarAlCarrito} disabled={agregando}>
+                      {agregando ? "Agregando..." : `Agregar al carrito · S/ ${calcularTotalProducto()}`}
                     </button>
 
                     <button className="btn-secondary-action" onClick={() => setProductoDetalle(null)}>

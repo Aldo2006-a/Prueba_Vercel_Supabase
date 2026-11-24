@@ -10,21 +10,35 @@ const datos = (respuesta) => respuesta.data.data;
 /* ---------- Llamadas ---------- */
 export const obtenerLocales = async () => datos(await api.get('/stores'));
 
+// Un local con su horario (la pantalla de confirmación lo usa para armar las franjas)
+export const obtenerLocal = async (idLocal) => datos(await api.get(`/stores/${idLocal}`));
+
 export const obtenerCartaLocal = async (idLocal) =>
   datos(await api.get(`/stores/${idLocal}/products`));
 
 /* ---------- Conversiones ---------- */
 
+const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+// { days_ahead, day_of_week, time } -> "hoy a las 07:00" / "mañana a las 07:00" / "el lunes a las 07:00"
+const textoApertura = (proxima) => {
+  if (!proxima) return '';
+  if (proxima.days_ahead === 0) return `hoy a las ${proxima.time}`;
+  if (proxima.days_ahead === 1) return `mañana a las ${proxima.time}`;
+  return `el ${DIAS_SEMANA[proxima.day_of_week % 7]} a las ${proxima.time}`;
+};
+
 // Local de la base de datos -> tarjeta de "Locales del campus".
-// Aún no hay horarios ni reseñas en la base, por eso estado = Abierto y sin tiempo/calificación.
+// El estado Abierto/Cerrado sale del horario del local (hora de Lima).
+// Aún no hay reseñas en la base, por eso sin tiempo/calificación.
 export const localALista = (local) => ({
   id: local.id,
   nombre: local.commercial_name,
-  estado: 'Abierto',
+  estado: local.open_now ? 'Abierto' : 'Cerrado',
   ubicacion: local.campus_location || '',
   tiempoPrep: '',
   calificacion: null,
-  aperturaProx: '',
+  aperturaProx: textoApertura(local.next_open),
 });
 
 // Producto de la base de datos -> producto de la carta del comensal
@@ -53,3 +67,7 @@ export const categoriasDeCarta = (productos) => {
     .sort((a, b) => a[1].orden - b[1].orden || a[1].id - b[1].id)
     .map(([nombre]) => nombre);
 };
+
+/* ---------- Cuenta en sesión ---------- */
+// { name, initials, role, ... } del usuario que inició sesión.
+export const obtenerMiPerfil = async () => datos(await api.get('/me'));

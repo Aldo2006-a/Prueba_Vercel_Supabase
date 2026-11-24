@@ -1,33 +1,94 @@
 // src/pages/CarritoComensal/CarritoComensal.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  obtenerCarrito,
+  cambiarCantidadCarrito,
+  quitarDelCarrito,
+  vaciarCarrito,
+} from '../../../api/pedidos';
+import { mensajeDeError } from '../../../api/carta';
 import './CarritoComensal.css';
 
-export default function CarritoComensal({ items = [], setItems }) {
+const soles = (n) => `S/ ${Number(n).toFixed(2)}`;
+
+export default function CarritoComensal({ carrito, setCarrito }) {
   const navigate = useNavigate();
   const [productoAgotadoModal, setProductoAgotadoModal] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState('');
 
-  const subtotal = items.reduce((acc, curr) => acc + curr.subtotal, 0);
-  const costoAgregados = items.length > 0 ? 2.00 : 0;
-  const costoEmpaque = items.length > 0 ? 0.50 : 0;
-  const totalGeneral = subtotal + costoAgregados + costoEmpaque;
+  const items = carrito.items;
+  const agotados = items.filter((i) => !i.available);
+  const nombreLocal = carrito.store ? carrito.store.name : '';
 
-  const handleCambiarCantidad = (id, cambio) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const nuevaCant = item.cantidad + cambio;
-          if (nuevaCant <= 0) return null;
-          return { ...item, cantidad: nuevaCant, subtotal: nuevaCant * item.precioUnitario };
-        }
-        return item;
-      }).filter(Boolean)
+  // Al entrar se vuelve a pedir el carrito para ver precios y disponibilidad al día
+  useEffect(() => {
+    obtenerCarrito()
+      .then(setCarrito)
+      .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar tu carrito.')))
+      .finally(() => setCargando(false));
+  }, [setCarrito]);
+
+  // Ejecuta una llamada que devuelve el carrito actualizado
+  const actualizar = async (llamada, mensajeError) => {
+    setOcupado(true);
+    setError('');
+    try {
+      setCarrito(await llamada());
+    } catch (e) {
+      setError(mensajeDeError(e, mensajeError));
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const handleCambiarCantidad = (item, cambio) => {
+    const nueva = item.quantity + cambio;
+    if (nueva < 1) return handleQuitar(item);
+    return actualizar(() => cambiarCantidadCarrito(item.id, nueva), 'No se pudo cambiar la cantidad.');
+  };
+
+  const handleQuitar = (item) =>
+    actualizar(() => quitarDelCarrito(item.id), 'No se pudo quitar el producto.');
+
+  const handleVaciarCarrito = () =>
+    actualizar(() => vaciarCarrito(), 'No se pudo vaciar el carrito.');
+
+  // Quita del carrito los productos que el local marcó como agotados
+  const handleQuitarAgotados = async () => {
+    setOcupado(true);
+    setError('');
+    try {
+      let actual = carrito;
+      for (const item of agotados) {
+        actual = await quitarDelCarrito(item.id);
+      }
+      setCarrito(actual);
+      setProductoAgotadoModal(false);
+    } catch (e) {
+      setError(mensajeDeError(e, 'No se pudieron quitar los productos agotados.'));
+    } finally {
+      setOcupado(false);
+    }
+  };
+
+  const handleContinuar = () => {
+    if (agotados.length > 0) {
+      setProductoAgotadoModal(true);
+    } else {
+      navigate('/comensales/confirmacion');
+    }
+  };
+
+  if (cargando && items.length === 0) {
+    return (
+      <main className="carrito-layout">
+        <p className="locales-subtitle">Cargando tu carrito...</p>
+      </main>
     );
-  };
-
-  const handleVaciarCarrito = () => {
-    setItems([]);
-  };
+  }
 
   // VISTA CARRITO VACÍO
   if (items.length === 0) {
@@ -41,32 +102,10 @@ export default function CarritoComensal({ items = [], setItems }) {
           <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "24px" }}>
             Elige un local abierto y agrega tu primer producto para pedir con anticipación y recogerlo sin hacer cola.
           </p>
+          {error && <div className="alert-obligatorio">{error}</div>}
           <button className="btn-primary-action" onClick={() => navigate('/comensales/localescomensal')}>
             Ver locales abiertos
           </button>
-        </div>
-
-        {/* VUELVE A PEDIR LO DE SIEMPRE */}
-        <div style={{ marginTop: "40px" }}>
-          <label className="field-label" style={{ display: "block", marginBottom: "12px" }}>VUELVE A PEDIR LO DE SIEMPRE</label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "16px" }}>
-            {[
-              { id: 101, nombre: "Sándwich de pollo", local: "Cafetería Central · S/ 9.50" },
-              { id: 102, nombre: "Menú ejecutivo", local: "Menú Universitario N · S/ 14.00" },
-              { id: 103, nombre: "Café pasado", local: "Café de Biblioteca · S/ 3.50" }
-            ].map((p) => (
-              <div key={p.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                  <div style={{ width: "44px", height: "44px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", borderRadius: "8px" }}></div>
-                  <div>
-                    <h5 className="product-title" style={{ fontSize: "14px", margin: 0 }}>{p.nombre}</h5>
-                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{p.local}</span>
-                  </div>
-                </div>
-                <button className="btn-primary-action" style={{ minHeight: "36px", padding: "0 12px", fontSize: "12px" }}>Agregar</button>
-              </div>
-            ))}
-          </div>
         </div>
       </main>
     );
@@ -76,13 +115,15 @@ export default function CarritoComensal({ items = [], setItems }) {
   return (
     <main className="carrito-layout">
       <div className="breadcrumbs">
-        Cafetería Central &gt; <span>Tu carrito</span>
+        {nombreLocal} &gt; <span>Tu carrito</span>
       </div>
 
       <h1 className="locales-title">Tu carrito</h1>
       <p className="locales-subtitle" style={{ marginBottom: "16px" }}>
-        {items.length} items de Cafetería Central
+        {carrito.count} {carrito.count === 1 ? 'producto' : 'productos'} de {nombreLocal}
       </p>
+
+      {error && <div className="alert-obligatorio" style={{ marginBottom: "12px" }}>{error}</div>}
 
       <div className="carrito-grid-main">
         <div>
@@ -92,26 +133,29 @@ export default function CarritoComensal({ items = [], setItems }) {
 
           <div className="cart-card-container">
             {items.map((item) => (
-              <div key={item.id} className="cart-item-row">
+              <div key={item.id} className="cart-item-row" style={item.available ? undefined : { opacity: 0.6 }}>
                 <div className="cart-item-left">
                   <div className="cart-item-thumb"></div>
                   <div className="cart-item-info">
-                    <h4>{item.nombre}</h4>
-                    <p>{item.detalles}</p>
-                    {item.nota && <p className="nota-text">Nota: {item.nota}</p>}
+                    <h4>{item.name}</h4>
+                    <p>
+                      {soles(item.price)} c/u
+                      {!item.available && ' · Agotado'}
+                    </p>
+                    {item.notes && <p className="nota-text">Nota: {item.notes}</p>}
                   </div>
                 </div>
 
                 <div className="cart-item-right">
                   <div className="counter-box">
-                    <button onClick={() => handleCambiarCantidad(item.id, -1)}>-</button>
-                    <span>{item.cantidad}</span>
-                    <button onClick={() => handleCambiarCantidad(item.id, 1)}>+</button>
+                    <button disabled={ocupado} onClick={() => handleCambiarCantidad(item, -1)}>-</button>
+                    <span>{item.quantity}</span>
+                    <button disabled={ocupado} onClick={() => handleCambiarCantidad(item, 1)}>+</button>
                   </div>
                   <span className="price-text" style={{ minWidth: "70px", textAlign: "right" }}>
-                    S/ {item.subtotal.toFixed(2)}
+                    {soles(item.subtotal)}
                   </span>
-                  <button className="btn-link-danger" onClick={() => handleCambiarCantidad(item.id, -item.cantidad)}>
+                  <button className="btn-link-danger" disabled={ocupado} onClick={() => handleQuitar(item)}>
                     Quitar
                   </button>
                 </div>
@@ -122,7 +166,7 @@ export default function CarritoComensal({ items = [], setItems }) {
               <button className="btn-secondary-action" onClick={() => navigate('/comensales/localescomensal')}>
                 Seguir agregando
               </button>
-              <button className="btn-link-danger" onClick={handleVaciarCarrito}>
+              <button className="btn-link-danger" disabled={ocupado} onClick={handleVaciarCarrito}>
                 Vaciar carrito
               </button>
             </div>
@@ -133,21 +177,13 @@ export default function CarritoComensal({ items = [], setItems }) {
         <div className="resumen-card-side">
           <h3>Resumen</h3>
           <div className="resumen-line">
-            <span>Productos ({items.reduce((a, b) => a + b.cantidad, 0)})</span>
-            <span>S/ {subtotal.toFixed(2)}</span>
-          </div>
-          <div className="resumen-line">
-            <span>Agregados</span>
-            <span>S/ {costoAgregados.toFixed(2)}</span>
-          </div>
-          <div className="resumen-line">
-            <span>Empaque para llevar</span>
-            <span>S/ {costoEmpaque.toFixed(2)}</span>
+            <span>Productos ({carrito.count})</span>
+            <span>{soles(carrito.total)}</span>
           </div>
 
           <div className="resumen-line resumen-line--total">
-            <span>Subtotal</span>
-            <span>S/ {totalGeneral.toFixed(2)}</span>
+            <span>Total</span>
+            <span>{soles(carrito.total)}</span>
           </div>
 
           <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "16px 0", lineHeight: "1.4" }}>
@@ -157,13 +193,8 @@ export default function CarritoComensal({ items = [], setItems }) {
           <button
             className="btn-primary-action"
             style={{ width: "100%" }}
-            onClick={() => {
-              if (items.some(i => i.nombre.includes("Empanada"))) {
-                setProductoAgotadoModal(true);
-              } else {
-                navigate('/comensales/confirmacion');
-              }
-            }}
+            disabled={ocupado}
+            onClick={handleContinuar}
           >
             Elegir hora de recojo
           </button>
@@ -177,43 +208,28 @@ export default function CarritoComensal({ items = [], setItems }) {
             <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", marginBottom: "16px" }}>
               <div style={{ width: "40px", height: "40px", background: "#FDF6E2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", color: "#B7791F", fontWeight: "bold", fontSize: "20px" }}>!</div>
               <div>
-                <h3 className="section-title" style={{ margin: 0 }}>Un producto de tu carrito se agotó</h3>
+                <h3 className="section-title" style={{ margin: 0 }}>
+                  {agotados.length === 1 ? 'Un producto de tu carrito se agotó' : 'Algunos productos de tu carrito se agotaron'}
+                </h3>
                 <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "4px 0 0" }}>
-                  Cafetería Central marcó «Empanada de carne» como agotada. Quítala o reemplázala para continuar con tu pedido.
+                  {nombreLocal} los marcó como agotados. Quítalos para continuar con tu pedido.
                 </p>
               </div>
             </div>
 
-            <div style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-container)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                <div style={{ width: "40px", height: "40px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", borderRadius: "6px" }}></div>
+            {agotados.map((item) => (
+              <div key={item.id} style={{ background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--radius-container)", padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                 <div>
-                  <h5 className="product-title" style={{ fontSize: "14px", margin: 0 }}>Empanada de carne</h5>
-                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>1 unidad · S/ 5.00</span>
+                  <h5 className="product-title" style={{ fontSize: "14px", margin: 0 }}>{item.name}</h5>
+                  <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{item.quantity} {item.quantity === 1 ? 'unidad' : 'unidades'} · {soles(item.subtotal)}</span>
                 </div>
+                <span className="status-pill pill-closed">Agotado</span>
               </div>
-              <span className="status-pill pill-closed">Agotado</span>
-            </div>
+            ))}
 
-            <label className="field-label" style={{ display: "block", marginBottom: "8px" }}>REEMPLAZAR POR</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginBottom: "24px" }}>
-              <div style={{ background: "var(--primary-soft)", border: "1px solid var(--primary)", borderRadius: "var(--radius-container)", padding: "10px", cursor: "pointer" }}>
-                <strong style={{ fontSize: "13px", display: "block" }}>Empanada de pollo</strong>
-                <span style={{ fontSize: "12px", color: "var(--primary)", fontWeight: "bold" }}>S/ 5.00</span>
-              </div>
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-container)", padding: "10px", cursor: "pointer" }}>
-                <strong style={{ fontSize: "13px", display: "block" }}>Pan con palta</strong>
-                <span style={{ fontSize: "12px", color: "var(--text)" }}>S/ 8.50</span>
-              </div>
-              <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-container)", padding: "10px", cursor: "pointer" }}>
-                <strong style={{ fontSize: "13px", display: "block" }}>Tostadas</strong>
-                <span style={{ fontSize: "12px", color: "var(--text)" }}>S/ 5.50</span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-              <button className="btn-secondary-action" onClick={() => setProductoAgotadoModal(false)}>Quitar del carrito</button>
-              <button className="btn-primary-action" onClick={() => { setProductoAgotadoModal(false); navigate('/comensales/confirmacion'); }}>Reemplazar y continuar</button>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "16px" }}>
+              <button className="btn-secondary-action" onClick={() => setProductoAgotadoModal(false)}>Cerrar</button>
+              <button className="btn-primary-action" disabled={ocupado} onClick={handleQuitarAgotados}>Quitar del carrito</button>
             </div>
           </div>
         </div>

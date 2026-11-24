@@ -24,6 +24,13 @@ const findByIdAndStore = async (id, storeId) => {
 };
 
 /**
+ * Obtener un producto por ID (sin importar el local)
+ */
+const findById = async (id) => {
+  return await Product.findByPk(id);
+};
+
+/**
  * Contar productos de una categoría
  */
 const countByCategory = async (categoryId) => {
@@ -55,6 +62,7 @@ const deleteProduct = async (product) => {
 const productRepository = {
   findAllByStore,
   findByIdAndStore,
+  findById,
   countByCategory,
   create,
   update,

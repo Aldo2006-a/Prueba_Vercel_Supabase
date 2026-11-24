@@ -20,7 +20,7 @@ export default function SubHeaderComensal() {
             to="/comensales/pedidos"
             className={({ isActive }) => (isActive ? 'tab-link tab-link--active' : 'tab-link')}
           >
-            Mis pedidos <span className="tab-badge">2</span>
+            Mis pedidos
           </NavLink>
         </li>
         <li>

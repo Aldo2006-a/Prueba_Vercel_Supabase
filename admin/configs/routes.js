@@ -10,6 +10,11 @@ import * as userApis from '../apis/users_apis.js';
 import * as storeApis from '../apis/stores_apis.js';
 import * as categoryApis from '../apis/categories_apis.js';
 import * as productApis from '../apis/products_apis.js';
+import * as profileApis from '../apis/profile_apis.js';
+import * as cartApis from '../apis/carts_apis.js';
+import * as orderApis from '../apis/orders_apis.js';
+import * as scheduleApis from '../apis/schedules_apis.js';
+import { loadMyDiner } from '../apis/diners_apis.js';
 import { requireRole, requireAuth } from '../../configs/middlewares.js';
 
 const router = Router();
@@ -61,6 +66,7 @@ router.get('/api/v1/users', requireRole('owner'), userApis.listUsers);
 router.get('/api/v1/users/:id', requireRole('owner'), userApis.getUserById);
 
 // api locales y carta (cualquier usuario con sesión)
+router.get('/api/v1/me', requireAuth, profileApis.getMe);
 router.get('/api/v1/stores', requireAuth, storeApis.listStores);
 router.get('/api/v1/stores/:id', requireAuth, storeApis.getStoreById);
 router.get('/api/v1/stores/:id/products', requireAuth, productApis.listStoreProducts);
@@ -78,6 +84,25 @@ router.post('/api/v1/my-store/products', requireRole('enterprises'), storeApis.l
 router.get('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.getMyProductById);
 router.put('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.updateMyProduct);
 router.delete('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.deleteMyProduct);
+
+// api comensal: mi carrito y mis pedidos (solo comensal, sobre SU perfil)
+router.get('/api/v1/my-cart', requireRole('comensal'), loadMyDiner, cartApis.getMyCart);
+router.post('/api/v1/my-cart/items', requireRole('comensal'), loadMyDiner, cartApis.addToMyCart);
+router.patch('/api/v1/my-cart/items/:id', requireRole('comensal'), loadMyDiner, cartApis.updateMyCartItem);
+router.delete('/api/v1/my-cart/items/:id', requireRole('comensal'), loadMyDiner, cartApis.deleteMyCartItem);
+router.delete('/api/v1/my-cart', requireRole('comensal'), loadMyDiner, cartApis.clearMyCart);
+
+router.get('/api/v1/my-orders', requireRole('comensal'), loadMyDiner, orderApis.listMyOrders);
+router.post('/api/v1/my-orders', requireRole('comensal'), loadMyDiner, orderApis.createMyOrder);
+
+// api mi local: horario de atención (solo enterprises, sobre SU local)
+router.get('/api/v1/my-store/schedule', requireRole('enterprises'), storeApis.loadMyStore, scheduleApis.getMySchedule);
+router.put('/api/v1/my-store/schedule', requireRole('enterprises'), storeApis.loadMyStore, scheduleApis.saveMySchedule);
+
+// api mi local: pedidos (solo enterprises, sobre SU local)
+router.get('/api/v1/my-store/orders', requireRole('enterprises'), storeApis.loadMyStore, orderApis.listStoreOrders);
+router.get('/api/v1/my-store/orders/by-code/:code', requireRole('enterprises'), storeApis.loadMyStore, orderApis.getStoreOrderByCode);
+router.patch('/api/v1/my-store/orders/:id/status', requireRole('enterprises'), storeApis.loadMyStore, orderApis.changeStoreOrderStatus);
 
 router.post('/enterprises/logout', enterprises.salir);
 router.post('/comensales/logout', comensales.salir);

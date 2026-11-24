@@ -1,17 +1,19 @@
-import { Store } from '../models/associations.js';
+import { Store, StoreSchedule } from '../models/associations.js';
+
+const includeSchedules = { model: StoreSchedule, as: 'schedules' };
 
 /**
- * Obtener locales (con opciones: where, order, etc.)
+ * Obtener locales (con opciones: where, order, etc.) junto con su horario
  */
 const findAll = async (options = {}) => {
-  return await Store.findAll(options);
+  return await Store.findAll({ ...options, include: [includeSchedules] });
 };
 
 /**
- * Obtener local por ID
+ * Obtener local por ID (con su horario)
  */
 const findById = async (id) => {
-  return await Store.findByPk(id);
+  return await Store.findByPk(id, { include: [includeSchedules] });
 };
 
 /**

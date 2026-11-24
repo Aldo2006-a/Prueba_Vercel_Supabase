@@ -1,15 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+    obtenerPedidosLocal,
+    cambiarEstadoPedido,
+    ahoraEnLima,
+    sumarDias,
+    fechaCorta,
+    horaAMinutos,
+} from '../../../api/pedidos';
+import { mensajeDeError } from '../../../api/carta';
 import './Bandeja.css';
-
-const AHORA = '11:24'; // hora de referencia (luego puedes usar la real)
-
-const aMinutos = (hhmm) => {
-    const [h, m] = hhmm.split(':').map(Number);
-    return h * 60 + m;
-};
-
-const horaActualReal = () =>
-    new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
 
 const COLUMNAS = [
     { estado: 'recibido',    titulo: 'RECIBIDOS' },
@@ -18,89 +18,128 @@ const COLUMNAS = [
     { estado: 'entregado',   titulo: 'ENTREGADOS' },
 ];
 
-const PEDIDOS_INICIALES = [
-    { id: 'PED-4842', items: 3, total: 36.0, cliente: 'Mateo Rojas',   hora: '11:30', estado: 'recibido' },
-    { id: 'PED-4843', items: 1, total: 3.5,  cliente: 'Lucía Farfán',  hora: '11:30', estado: 'recibido' },
-    { id: 'PED-4821', items: 3, total: 21.0, cliente: 'Mateo Rojas',   hora: '11:30', estado: 'preparacion', notas: 1 },
-    { id: 'PED-4835', items: 1, total: 7.5,  cliente: 'Andrea Núñez',  hora: '11:00', estado: 'listo' },
-    { id: 'PED-4805', items: 2, total: 12.5, cliente: 'Renzo Vílchez', hora: '10:30', estado: 'entregado', entregadoA: '10:34' },
-];
+// Cada cuánto se vuelve a pedir la lista para ver pedidos nuevos (ms)
+const REFRESCO_MS = 15000;
+
+const horaActual = (minutos) =>
+    `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
 
 export default function Bandeja() {
-    // useState guarda los pedidos que se estan mostrando
-    //  pedidos contiene estado actual y set pedidos permite modificarlo
-    const [pedidos, setPedidos] = useState(PEDIDOS_INICIALES);
+    // pedidos = los pedidos reales del local (API); se actualizan al cambiar de estado y cada 15 s
+    const [pedidos, setPedidos] = useState([]);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState('');
+    const [ocupado, setOcupado] = useState(false);
+    const [ahora, setAhora] = useState(ahoraEnLima());
 
-    // Busca el pedido por su ID y le cambia el estado, extra es informacion que le puedo agregar
-    const cambiarEstado = (id, nuevoEstado, extra = {}) =>
-        setPedidos((prev) =>
-            // prev.map recorre los pedidos uno por uno, p es como el valor que va tomando con cada iteracion
-            // si p es igual al que busco ... copia los demas datos del producto y el estado queda como nuevo estado
-            // si no queda igual
-            prev.map((p) => (p.id === id ? { ...p, estado: nuevoEstado, ...extra } : p))
-        );
+    useEffect(() => {
+        let activo = true;
 
-    // atajos para enviarle al cambiar estado a la hora que se hace click
-    const preparar   = (id) => cambiarEstado(id, 'preparacion');
-    const marcarListo = (id) => cambiarEstado(id, 'listo');
-    // aca lo mismo pero se pasa un comentario extra adicional
-    const entregar   = (id) => cambiarEstado(id, 'entregado', { entregadoA: horaActualReal() });
+        const cargar = () =>
+            obtenerPedidosLocal()
+                .then((lista) => {
+                    if (!activo) return;
+                    setPedidos(lista);
+                    setAhora(ahoraEnLima());
+                    setError('');
+                })
+                .catch((e) => activo && setError(mensajeDeError(e, 'No se pudieron cargar los pedidos.')))
+                .finally(() => activo && setCargando(false));
 
-    // primero se muestra pregunta luego filtra, quedate con todo los pedidos menos el que selecciono
-    const rechazar   = (id) => {
-        if (window.confirm(`¿Rechazar el pedido ${id}?`)) {
-            setPedidos((prev) => prev.filter((p) => p.id !== id));
+        cargar();
+        const temporizador = setInterval(cargar, REFRESCO_MS);
+
+        return () => {
+            activo = false;
+            clearInterval(temporizador);
+        };
+    }, []);
+
+    // Cambia el estado en el servidor y reemplaza el pedido con la respuesta
+    const cambiarEstado = async (id, nuevoEstado) => {
+        setOcupado(true);
+        setError('');
+        try {
+            const actualizado = await cambiarEstadoPedido(id, nuevoEstado);
+            setPedidos((prev) => prev.map((p) => (p.id === id ? actualizado : p)));
+        } catch (e) {
+            setError(mensajeDeError(e, 'No se pudo cambiar el estado del pedido.'));
+        } finally {
+            setOcupado(false);
         }
     };
 
-    const enCola = pedidos.filter((p) => p.estado !== 'entregado').length;
+    const preparar    = (p) => cambiarEstado(p.id, 'preparacion');
+    const marcarListo = (p) => cambiarEstado(p.id, 'listo');
+    const entregar    = (p) => cambiarEstado(p.id, 'entregado');
+
+    // primero se muestra la pregunta; si confirma, el pedido pasa a "rechazado" y sale del tablero
+    const rechazar = (p) => {
+        if (window.confirm(`¿Rechazar el pedido ${p.code}?`)) {
+            cambiarEstado(p.id, 'rechazado');
+        }
+    };
+
+    // El tablero muestra los 4 estados; los rechazados no aparecen
+    const visibles = pedidos.filter((p) => p.status !== 'rechazado');
+    const enCola = visibles.filter((p) => p.status !== 'entregado').length;
+    const fechaManana = sumarDias(ahora.fecha, 1);
 
     const renderAcciones = (p) => {
-        switch (p.estado) {
+        switch (p.status) {
             case 'recibido':
                 return (
                     <div className="pedido-actions">
-                        <button className="btn btn-danger-custom w-100" onClick={() => preparar(p.id)}>Preparar</button>
-                        <button className="btn btn-outline-danger w-50" onClick={() => rechazar(p.id)}>Rechazar</button>
+                        <button className="btn btn-danger-custom w-100" disabled={ocupado} onClick={() => preparar(p)}>Preparar</button>
+                        <button className="btn btn-outline-danger w-50" disabled={ocupado} onClick={() => rechazar(p)}>Rechazar</button>
                     </div>
                 );
             case 'preparacion':
-                return <button className="btn btn-success-custom w-100 mt-2" onClick={() => marcarListo(p.id)}>Marcar listo</button>;
+                return <button className="btn btn-success-custom w-100 mt-2" disabled={ocupado} onClick={() => marcarListo(p)}>Marcar listo</button>;
             case 'listo':
-                return <button className="btn btn-dark-custom w-100 mt-2" onClick={() => entregar(p.id)}>Entregar</button>;
+                return <button className="btn btn-dark-custom w-100 mt-2" disabled={ocupado} onClick={() => entregar(p)}>Entregar</button>;
             default:
                 return null;
         }
     };
 
+    // "mañana" / dd/mm cuando el pedido no es para hoy
+    const etiquetaDia = (p) => {
+        if (p.pickup_date === ahora.fecha) return '';
+        return p.pickup_date === fechaManana ? ' (mañana)' : ` (${fechaCorta(p.pickup_date)})`;
+    };
+
+    const notasDe = (p) => p.items.filter((i) => i.notes).length;
+
     const renderDetalle = (p) => {
         const precio = `S/ ${p.total.toFixed(2)}`;
-        const items = `${p.items} ${p.items === 1 ? 'item' : 'items'}`;
+        const items = `${p.items_count} ${p.items_count === 1 ? 'item' : 'items'}`;
+        const notas = notasDe(p);
 
-        if (p.estado === 'preparacion') {
+        if (p.status === 'preparacion') {
             return (
                 <>
-                    {items} • recojo {p.hora}<br />
-                    {p.cliente}{p.notas ? ` • ${p.notas} nota${p.notas > 1 ? 's' : ''}` : ''}
+                    {items} • recojo {p.pickup_time}{etiquetaDia(p)}<br />
+                    {p.diner.name}{notas ? ` • ${notas} nota${notas > 1 ? 's' : ''}` : ''}
                 </>
             );
         }
-        if (p.estado === 'entregado') {
-            return <>{items} • {precio}<br />{p.cliente} • entregado {p.entregadoA}</>;
+        if (p.status === 'entregado') {
+            return <>{items} • {precio}<br />{p.diner.name} • entregado</>;
         }
-        return <>{items} • {precio}<br />{p.cliente}</>;
+        return <>{items} • {precio}<br />{p.diner.name}{notas ? ` • ${notas} nota${notas > 1 ? 's' : ''}` : ''}</>;
     };
 
     const renderTiempo = (p) => {
-        if (p.estado === 'preparacion') {
-            const min = aMinutos(p.hora) - aMinutos(AHORA);
+        if (p.status === 'preparacion' && p.pickup_date === ahora.fecha) {
+            const min = horaAMinutos(p.pickup_time) - ahora.minutos;
             return (
                 <span className={`pedido-time fw-bold ${min <= 5 ? 'urgente' : ''}`}>
                     {min > 0 ? `en ${min} min` : 'ya toca'}
                 </span>
             );
         }
-        return <span className="pedido-time">{p.hora}</span>;
+        return <span className="pedido-time">{p.pickup_time}{etiquetaDia(p)}</span>;
     };
 
     return (
@@ -112,18 +151,21 @@ export default function Bandeja() {
                         <span className="text-muted-custom small">Atención &gt; Bandeja del día</span>
                         <h1 className="mb-1">Bandeja del día</h1>
                         <p className="text-muted-custom small">
-                            15/09/2026 - {pedidos.length} pedidos de la jornada - {enCola} en cola - hora actual {AHORA}
+                            {fechaCorta(ahora.fecha)} - {visibles.length} {visibles.length === 1 ? 'pedido' : 'pedidos'} en la bandeja - {enCola} en cola - hora actual {horaActual(ahora.minutos)}
                         </p>
                     </div>
                     <div className="bandeja-actions">
                         <button className="btn btn-outline-custom">Agrupar por: estado ▼</button>
-                        <button className="btn btn-danger-custom">Entregar contra código</button>
+                        <Link to="/enterprises/entrega" className="btn btn-danger-custom">Entregar contra código</Link>
                     </div>
                 </div>
 
+                {error && <div className="alert alert-danger" role="alert">{error}</div>}
+                {cargando && <p className="text-muted-custom small">Cargando pedidos...</p>}
+
                 <div className="kanban-board">
                     {COLUMNAS.map(({ estado, titulo }) => {
-                        const lista = pedidos.filter((p) => p.estado === estado);
+                        const lista = visibles.filter((p) => p.status === estado);
                         return (
                             <div key={estado} className={`kanban-column column-${estado}`}>
                                 <div className={`column-header header-${estado}`}>
@@ -137,7 +179,7 @@ export default function Bandeja() {
                                     <div key={p.id} className={`pedido-card card-${estado}`}>
                                         <div className="pedido-info">
                                             <div>
-                                                <h4 className="pedido-id">{p.id}</h4>
+                                                <h4 className="pedido-id">{p.code}</h4>
                                                 <p className="pedido-details">{renderDetalle(p)}</p>
                                             </div>
                                             {renderTiempo(p)}

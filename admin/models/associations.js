@@ -3,6 +3,13 @@ import User from './user.js';
 import Store from './store.js';
 import Category from './category.js';
 import Product from './product.js';
+import Diner from './diner.js';
+import Cart from './cart.js';
+import CartItem from './cart_item.js';
+import OrderStatus from './order_status.js';
+import Order from './order.js';
+import OrderItem from './order_item.js';
+import StoreSchedule from './store_schedule.js';
 
 // roles 1 --- N users
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -11,6 +18,14 @@ User.belongsTo(Role, { foreignKey: 'role_id', as: 'role' });
 // users 1 --- 1 stores
 User.hasOne(Store, { foreignKey: 'user_id', as: 'store' });
 Store.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// users 1 --- 1 diners
+User.hasOne(Diner, { foreignKey: 'user_id', as: 'diner' });
+Diner.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+
+// stores 1 --- N store_schedules (un horario por día de la semana)
+Store.hasMany(StoreSchedule, { foreignKey: 'store_id', as: 'schedules' });
+StoreSchedule.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 
 // stores 1 --- N categories
 Store.hasMany(Category, { foreignKey: 'store_id', as: 'categories' });
@@ -24,4 +39,28 @@ Product.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 Category.hasMany(Product, { foreignKey: 'category_id', as: 'products' });
 Product.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 
-export { Role, User, Store, Category, Product };
+// diners 1 --- 1 carts, stores 1 --- N carts
+Diner.hasOne(Cart, { foreignKey: 'diner_id', as: 'cart' });
+Cart.belongsTo(Diner, { foreignKey: 'diner_id', as: 'diner' });
+Store.hasMany(Cart, { foreignKey: 'store_id', as: 'carts' });
+Cart.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
+
+// carts 1 --- N cart_items, products 1 --- N cart_items
+Cart.hasMany(CartItem, { foreignKey: 'cart_id', as: 'items' });
+CartItem.belongsTo(Cart, { foreignKey: 'cart_id', as: 'cart' });
+Product.hasMany(CartItem, { foreignKey: 'product_id', as: 'cartItems' });
+CartItem.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
+// order_statuses 1 --- N orders; diners 1 --- N orders; stores 1 --- N orders
+OrderStatus.hasMany(Order, { foreignKey: 'status_id', as: 'orders' });
+Order.belongsTo(OrderStatus, { foreignKey: 'status_id', as: 'status' });
+Diner.hasMany(Order, { foreignKey: 'diner_id', as: 'orders' });
+Order.belongsTo(Diner, { foreignKey: 'diner_id', as: 'diner' });
+Store.hasMany(Order, { foreignKey: 'store_id', as: 'orders' });
+Order.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
+
+// orders 1 --- N order_items
+Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' });
+OrderItem.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+
+export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule };

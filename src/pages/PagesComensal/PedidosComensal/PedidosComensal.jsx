@@ -1,194 +1,193 @@
 // src/pages/PedidosComensal/PedidosComensal.jsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  obtenerMisPedidos,
+  fechaCorta,
+  ETIQUETA_ESTADO,
+  ESTADOS_EN_CURSO,
+} from '../../../api/pedidos';
+import { mensajeDeError } from '../../../api/carta';
 import './PedidosComensal.css';
 
-export default function PedidosComensal({ pedidos = [] }) {
+const soles = (n) => `S/ ${Number(n).toFixed(2)}`;
+
+// El estado "recibido" usa el mismo color que "en preparación"
+const CLASE_ESTADO = {
+  recibido: 'badge-status-preparacion',
+  preparacion: 'badge-status-preparacion',
+  listo: 'badge-status-listo',
+  entregado: 'badge-status-entregado',
+  rechazado: 'badge-status-rechazado',
+};
+
+// Cada cuánto se vuelve a pedir la lista para ver cambios de estado (ms)
+const REFRESCO_MS = 15000;
+
+export default function PedidosComensal() {
   const navigate = useNavigate();
 
-  // VISTA 4.3 MIS PEDIDOS COMPLETA (IMAGEN 9006d8.png)
+  const [pedidos, setPedidos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState('');
+  const [filtroLocal, setFiltroLocal] = useState('todos');
+  const [abierto, setAbierto] = useState(null); // id del pedido con el detalle desplegado
+
+  useEffect(() => {
+    let activo = true;
+
+    const cargar = () =>
+      obtenerMisPedidos()
+        .then((lista) => {
+          if (!activo) return;
+          setPedidos(lista);
+          setError('');
+        })
+        .catch((e) => activo && setError(mensajeDeError(e, 'No se pudieron cargar tus pedidos.')))
+        .finally(() => activo && setCargando(false));
+
+    cargar();
+    const temporizador = setInterval(cargar, REFRESCO_MS);
+
+    return () => {
+      activo = false;
+      clearInterval(temporizador);
+    };
+  }, []);
+
+  // Locales distintos de los que hay pedidos, para el filtro
+  const locales = [];
+  pedidos.forEach((p) => {
+    if (!locales.some((l) => l.id === p.store.id)) locales.push(p.store);
+  });
+
+  const visibles = pedidos.filter((p) => filtroLocal === 'todos' || String(p.store.id) === filtroLocal);
+  const enCurso = visibles.filter((p) => ESTADOS_EN_CURSO.includes(p.status));
+  const historicos = visibles.filter((p) => !ESTADOS_EN_CURSO.includes(p.status));
+
+  const tarjeta = (p) => {
+    const esListo = p.status === 'listo';
+    const esEntregado = p.status === 'entregado';
+    const desplegado = abierto === p.id;
+
+    return (
+      <div key={p.id}>
+        <div className={`pedido-row-card ${esListo ? 'pedido-row-card--listo' : ''}`}>
+          <div className="pedido-info-block">
+            <div className="pedido-title-code" style={{ minWidth: "180px" }}>
+              <h3>{p.store.name}</h3>
+              <span>{p.code}</span>
+            </div>
+            <div className="pedido-meta-item">
+              <label>RECOJO</label>
+              <span>{p.pickup_time}</span>
+            </div>
+            <div className="pedido-meta-item">
+              <label>FECHA</label>
+              <span>{fechaCorta(p.pickup_date)}</span>
+            </div>
+            <div className="pedido-meta-item">
+              <label>ÍTEMS</label>
+              <span>{p.items_count} {p.items_count === 1 ? 'producto' : 'productos'}</span>
+            </div>
+            <div className="pedido-meta-item">
+              <label>TOTAL</label>
+              <span>{soles(p.total)}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <span className={`badge-status-pill ${CLASE_ESTADO[p.status]}`}>
+              {ETIQUETA_ESTADO[p.status]}
+            </span>
+            <button
+              className="btn-secondary-action"
+              style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px" }}
+              onClick={() => setAbierto(desplegado ? null : p.id)}
+            >
+              {desplegado ? 'Ocultar detalle' : 'Ver detalle'}
+            </button>
+            {esEntregado && (
+              <button
+                className="btn-primary-action"
+                style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px", background: "#5B9B2E" }}
+                onClick={() => navigate('/comensales/calificaciones')}
+              >
+                Calificar
+              </button>
+            )}
+          </div>
+        </div>
+
+        {desplegado && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-container)", padding: "12px 16px", margin: "-4px 0 12px 0", fontSize: "13px" }}>
+            {esListo && (
+              <p style={{ margin: "0 0 8px 0", color: "var(--text-muted)" }}>
+                Tu pedido está listo. Dicta el código <strong>{p.code}</strong> en el mostrador para recoger y pagar.
+              </p>
+            )}
+            {p.items.map((i) => (
+              <div key={i.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
+                <span>
+                  {i.quantity} × {i.name}
+                  {i.notes && <span style={{ color: "var(--text-muted)" }}> · Nota: {i.notes}</span>}
+                </span>
+                <strong>{soles(i.subtotal)}</strong>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <main className="pedidos-layout">
       <div className="pedidos-header-row">
         <div>
           <h1 className="locales-title">Mis pedidos</h1>
-          <p className="locales-subtitle">2 pedidos en curso · 7 en el histórico</p>
+          <p className="locales-subtitle">
+            {enCurso.length} {enCurso.length === 1 ? 'pedido en curso' : 'pedidos en curso'} · {historicos.length} en el histórico
+          </p>
         </div>
-        <select className="filter-dropdown" defaultValue="todos">
+        <select
+          className="filter-dropdown"
+          value={filtroLocal}
+          onChange={(e) => setFiltroLocal(e.target.value)}
+        >
           <option value="todos">Local: todos</option>
-          <option value="central">Cafetería Central</option>
+          {locales.map((l) => (
+            <option key={l.id} value={String(l.id)}>{l.name}</option>
+          ))}
         </select>
       </div>
 
+      {error && <div className="alert-obligatorio">{error}</div>}
+      {cargando && <p className="locales-subtitle">Cargando tus pedidos...</p>}
+
+      {!cargando && pedidos.length === 0 && !error && (
+        <p className="locales-subtitle">
+          Aún no tienes pedidos. Elige un local y haz tu primer pedido.
+        </p>
+      )}
+
       {/* SECCIÓN EN CURSO */}
-      <div className="section-label-group">EN CURSO · 2</div>
-
-      <div className="pedido-row-card">
-        <div className="pedido-info-block">
-          <div className="pedido-title-code" style={{ minWidth: "180px" }}>
-            <h3>Cafetería Central</h3>
-            <span>PED-4821</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>RECOJO</label>
-            <span>11:30</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>FECHA</label>
-            <span>15/09/2026</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>ÍTEMS</label>
-            <span>3 productos</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>TOTAL</label>
-            <span>S/ 36.00</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <span className="badge-status-pill badge-status-preparacion">En preparación</span>
-          <button className="btn-outline-wide" style={{ minHeight: "36px", padding: "0 16px", fontSize: "13px", width: "auto" }}>
-            Ver avance
-          </button>
-        </div>
-      </div>
-
-      <div className="pedido-row-card pedido-row-card--listo">
-        <div className="pedido-info-block">
-          <div className="pedido-title-code" style={{ minWidth: "180px" }}>
-            <h3>Café de Biblioteca</h3>
-            <span>PED-4835</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>RECOJO</label>
-            <span>16:00</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>FECHA</label>
-            <span>15/09/2026</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>ÍTEMS</label>
-            <span>1 producto</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>TOTAL</label>
-            <span>S/ 7.50</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <span className="badge-status-pill badge-status-listo">Listo para recoger</span>
-          <button className="btn-primary-action" style={{ minHeight: "36px", padding: "0 16px", fontSize: "13px" }}>
-            Ver código
-          </button>
-        </div>
-      </div>
+      {enCurso.length > 0 && (
+        <>
+          <div className="section-label-group">EN CURSO · {enCurso.length}</div>
+          {enCurso.map(tarjeta)}
+        </>
+      )}
 
       {/* SECCIÓN HISTÓRICOS */}
-      <div className="section-label-group section-label-group--muted" style={{ marginTop: "32px" }}>
-        HISTÓRICOS
-      </div>
-
-      <div className="pedido-row-card">
-        <div className="pedido-info-block">
-          <div className="pedido-title-code" style={{ minWidth: "180px" }}>
-            <h3>Sanguchería pabellón E</h3>
-            <span>PED-4790</span>
+      {historicos.length > 0 && (
+        <>
+          <div className="section-label-group section-label-group--muted" style={{ marginTop: "32px" }}>
+            HISTÓRICOS
           </div>
-          <div className="pedido-meta-item">
-            <label>RECOJO</label>
-            <span>12:00</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>FECHA</label>
-            <span>12/09/2026</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>ÍTEMS</label>
-            <span>2 productos</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>TOTAL</label>
-            <span>S/ 12.00</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span className="badge-status-pill badge-status-entregado">Entregado</span>
-          <button className="btn-secondary-action" style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px" }}>Repetir</button>
-          <button className="btn-primary-action" style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px", background: "#5B9B2E" }} onClick={() => navigate('/comensales/calificaciones')}>Calificar</button>
-        </div>
-      </div>
-
-      <div className="pedido-row-card">
-        <div className="pedido-info-block">
-          <div className="pedido-title-code" style={{ minWidth: "180px" }}>
-            <h3>Menú Universitario N</h3>
-            <span>PED-4712</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>RECOJO</label>
-            <span>13:00</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>FECHA</label>
-            <span>09/09/2026</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>ÍTEMS</label>
-            <span>1 producto</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>TOTAL</label>
-            <span>S/ 14.00</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span className="badge-status-pill badge-status-rechazado">Rechazado</span>
-          <button className="btn-secondary-action" style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px" }}>Repetir</button>
-        </div>
-      </div>
-
-      <div className="pedido-row-card">
-        <div className="pedido-info-block">
-          <div className="pedido-title-code" style={{ minWidth: "180px" }}>
-            <h3>Juguería La Fuente</h3>
-            <span>PED-4655</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>RECOJO</label>
-            <span>10:30</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>FECHA</label>
-            <span>04/09/2026</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>ÍTEMS</label>
-            <span>2 productos</span>
-          </div>
-          <div className="pedido-meta-item">
-            <label>TOTAL</label>
-            <span>S/ 11.00</span>
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <span className="badge-status-pill badge-status-entregado">Entregado</span>
-          <button className="btn-secondary-action" style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px" }}>Repetir</button>
-        </div>
-      </div>
-
-      {/* PAGINACIÓN */}
-      <div className="pagination-row">
-        <span>Mostrando 1 a 5 de 9 pedidos</span>
-        <div className="pagination-controls">
-          <button className="page-btn">&lt;</button>
-          <button className="page-btn active">1</button>
-          <button className="page-btn">2</button>
-          <button className="page-btn">&gt;</button>
-        </div>
-      </div>
+          {historicos.map(tarjeta)}
+        </>
+      )}
     </main>
   );
 }

@@ -1,4 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+    obtenerHorario,
+    guardarHorarioApi,
+    horarioAFormulario,
+    formularioAHorario,
+} from '../../../api/horario';
+import { mensajeDeError } from '../../../api/carta';
 import './Horario.css';
 
 const PASO = 30; // minutos entre franjas
@@ -19,14 +26,14 @@ const OPCIONES_HORA = Array.from({ length: 48 }, (_, i) => {
     return `${h}:${i % 2 ? '30' : '00'}`;
 });
 
-// Datos de ejemplo (luego los reemplazas por tu API)
-const HORARIO_INICIAL = {
-    lun: { abierto: true, apertura: '07:00', cierre: '19:00' },
-    mar: { abierto: true, apertura: '07:00', cierre: '19:00' },
-    mie: { abierto: true, apertura: '07:00', cierre: '19:00' },
-    jue: { abierto: true, apertura: '07:00', cierre: '19:00' },
-    vie: { abierto: true, apertura: '07:00', cierre: '19:00' },
-    sab: { abierto: true, apertura: '08:00', cierre: '13:00' },
+// Mientras llega el horario real de la API, todos los días se ven cerrados
+const HORARIO_VACIO = {
+    lun: { abierto: false, apertura: '', cierre: '' },
+    mar: { abierto: false, apertura: '', cierre: '' },
+    mie: { abierto: false, apertura: '', cierre: '' },
+    jue: { abierto: false, apertura: '', cierre: '' },
+    vie: { abierto: false, apertura: '', cierre: '' },
+    sab: { abierto: false, apertura: '', cierre: '' },
     dom: { abierto: false, apertura: '', cierre: '' },
 };
 
@@ -101,11 +108,26 @@ function SelectHora({ etiqueta, valor, base, deshabilitado, invalido, onChange }
 }
 
 export default function Horario() {
-    const [guardado, setGuardado] = useState(HORARIO_INICIAL);
-    const [horario, setHorario] = useState(HORARIO_INICIAL);
+    const [guardado, setGuardado] = useState(HORARIO_VACIO);
+    const [horario, setHorario] = useState(HORARIO_VACIO);
+    const [cargando, setCargando] = useState(true);
+    const [guardando, setGuardando] = useState(false);
+    const [errorApi, setErrorApi] = useState('');
     const [diaPrevia, setDiaPrevia] = useState('lun');
     const [errores, setErrores] = useState({});
     const [aviso, setAviso] = useState('');
+
+    // Horario real del local (API)
+    useEffect(() => {
+        obtenerHorario()
+            .then((dias) => {
+                const formulario = horarioAFormulario(dias);
+                setGuardado(formulario);
+                setHorario(formulario);
+            })
+            .catch((e) => setErrorApi(mensajeDeError(e, 'No se pudo cargar el horario.')))
+            .finally(() => setCargando(false));
+    }, []);
 
     const hayCambios = DIAS.some((d) => diaCambio(horario[d.id], guardado[d.id]));
 
@@ -140,13 +162,24 @@ export default function Horario() {
         setAviso('');
     };
 
-    const guardar = () => {
+    const guardar = async () => {
         const e = validar(horario);
         setErrores(e);
         if (Object.keys(e).length) return;
-        // Aquí va tu llamada a la API
-        setGuardado(horario);
-        setAviso('Horario guardado. Las franjas de recojo ya se actualizaron.');
+
+        setGuardando(true);
+        setErrorApi('');
+        try {
+            const dias = await guardarHorarioApi(formularioAHorario(horario));
+            const formulario = horarioAFormulario(dias);
+            setGuardado(formulario);
+            setHorario(formulario);
+            setAviso('Horario guardado. Las franjas de recojo ya se actualizaron.');
+        } catch (err) {
+            setErrorApi(mensajeDeError(err, 'No se pudo guardar el horario.'));
+        } finally {
+            setGuardando(false);
+        }
     };
 
     // ===== Vista previa del día seleccionado =====
@@ -190,11 +223,14 @@ export default function Horario() {
                         <button type="button" className="btn-descartar" onClick={descartar} disabled={!hayCambios}>
                             Descartar
                         </button>
-                        <button type="button" className="btn-guardar-horario" onClick={guardar} disabled={!hayCambios}>
-                            Guardar horario
+                        <button type="button" className="btn-guardar-horario" onClick={guardar} disabled={!hayCambios || guardando || cargando}>
+                            {guardando ? 'Guardando...' : 'Guardar horario'}
                         </button>
                     </div>
                 </header>
+
+                {errorApi && <p className="horario-errores" role="alert">{errorApi}</p>}
+                {cargando && <p className="horario-sub">Cargando horario...</p>}
 
                 <div className="horario-layout">
                     {/* ===== Tabla de días ===== */}

@@ -1,4 +1,15 @@
 import storeRepository from '../repositories/stores_repository.js';
+import { normalizeSchedule, storeStatus } from './schedule_rules.js';
+
+/**
+ * Local + su horario y si está abierto ahora (hora de Lima)
+ */
+const withSchedule = (store) => {
+  const { schedules, ...data } = store.toJSON();
+  const schedule = normalizeSchedule(schedules);
+
+  return { ...data, schedule, ...storeStatus(schedule) };
+};
 
 /**
  * Obtener los locales activos (los que ve el comensal)
@@ -9,7 +20,7 @@ export const fetchAllActive = async () => {
     order: [['id', 'ASC']]
   });
 
-  return stores.map(store => store.toJSON());
+  return stores.map(withSchedule);
 };
 
 /**
@@ -22,7 +33,7 @@ export const fetchActiveById = async (id) => {
     return null;
   }
 
-  return store.toJSON();
+  return withSchedule(store);
 };
 
 /**
