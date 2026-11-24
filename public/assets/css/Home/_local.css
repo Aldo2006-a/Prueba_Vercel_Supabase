@@ -23,9 +23,9 @@ font-weight: 600;
 .local-banner-img {
 display: block;
 width: 100%;
-height: 300px;
+height: 18.75rem;
 object-fit: cover;
-border-radius: 14px;
+border-radius: 0.875rem;
 border: 1px solid #ece7e5;
 }
 
@@ -33,7 +33,7 @@ border: 1px solid #ece7e5;
 .badge-closed {
 display: inline-block;
 padding: .35rem .8rem;
-border-radius: 50px;
+border-radius: 3.125rem;
 font-size: .8rem;
 font-weight: 600;
 white-space: nowrap;
@@ -58,7 +58,7 @@ height: 100%;
 padding: 1.25rem;
 background: #fff;
 border: 1px solid #ece7e5;
-border-radius: 12px;
+border-radius: 0.75rem;
 }
 
 .info-card h2 {
@@ -78,7 +78,7 @@ font-weight: 600;
 padding: 1.5rem;
 background: #fff;
 border: 1px solid #ece7e5;
-border-radius: 12px;
+border-radius: 0.75rem;
 }
 
 .description-card h2 {
@@ -95,7 +95,7 @@ line-height: 1.7;
 
 @media (max-width: 767.98px) {
 .local-banner-img {
-height: 230px;
+height: 14.375rem;
 }
 
 .hero.hero-detalle h1 {
@@ -150,15 +150,15 @@ font-size: clamp(2rem, 4vw, 3rem);
 color: #514b49;
 font-size: 1.08rem;
 line-height: 1.8;
-max-width: 680px;
+max-width: 42.5rem;
 }
 
 .local-banner-img {
 display: block;
 width: 100%;
-height: 330px;
+height: 20.625rem;
 object-fit: cover;
-border-radius: 16px;
+border-radius: 1rem;
 border: 1px solid #ece7e5;
 box-shadow: 0 10px 30px rgba(50, 25, 15, .08);
 }
@@ -166,7 +166,7 @@ box-shadow: 0 10px 30px rgba(50, 25, 15, .08);
 .badge-open, .badge-closed {
 display: inline-block;
 padding: .4rem .85rem;
-border-radius: 50px;
+border-radius: 3.125rem;
 font-size: .8rem;
 font-weight: 700;
 white-space: nowrap;
@@ -202,16 +202,16 @@ height: 100%;
 padding: 1.35rem;
 background: #fff;
 border: 1px solid #ece7e5;
-border-radius: 14px;
+border-radius: 0.875rem;
 box-shadow: 0 3px 12px rgba(40, 20, 10, .025);
 }
 
 .info-card .info-icon {
-width: 42px;
-height: 42px;
+width: 2.625rem;
+height: 2.625rem;
 display: grid;
 place-items: center;
-border-radius: 12px;
+border-radius: 0.75rem;
 background: #fdf0ed;
 font-size: 1.2rem;
 margin-bottom: .9rem;
@@ -252,18 +252,18 @@ margin-top: .7rem;
 }
 
 .info-footer-note {
-border-left: 3px solid #d93829;
+border-left: 0.1875rem solid #d93829;
 padding: .9rem 1rem;
 background: #fff;
 color: #625b58;
-border-radius: 0 10px 10px 0;
+border-radius: 0 0.625rem 0.625rem 0;
 font-size: .9rem;
 line-height: 1.65;
 }
 
 @media (max-width: 767.98px) {
 .hero.hero-detalle { padding: 1.5rem 0 2rem; }
-.local-banner-img { height: 240px; }
+.local-banner-img { height: 15rem; }
 .local-intro { font-size: 1rem; }
 .local-info-section { padding-top: 1.5rem; }
 }

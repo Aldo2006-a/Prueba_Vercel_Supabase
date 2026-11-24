@@ -5,7 +5,7 @@
         footer {
             background-color: var(--marron);
             color: white;
-            padding: 12px 0;
+            padding: 0.75rem 0;
             font-size: 0.75rem;
             margin-top: auto;
         }
@@ -13,13 +13,13 @@
         .footer-brand {
             font-weight: 700;
             color: white;
-            margin-right: 20px;
+            margin-right: 1.25rem;
         }
 
         .footer-link {
             color: #c4b8b3;
             text-decoration: none;
-            margin-right: 20px;
+            margin-right: 1.25rem;
         }
 
         .footer-link:hover {

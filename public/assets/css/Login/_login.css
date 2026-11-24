@@ -15,8 +15,8 @@
     --warning: #B7791F;
     --danger: #B4322B;
     --info: #3B6FA8;
-    --radius: 12px;
-    --shadow: 0 4px 16px rgba(38, 25, 21, 0.035);
+    --radius: 0.75rem;
+    --shadow: 0 0.25rem 1rem rgba(38, 25, 21, 0.035);
 }
 
 /* Siempre reserva el espacio de la barra de scroll, igual que home */
@@ -32,10 +32,10 @@ html {
     color: #A53727;
     border: 1px solid #F5C2BC;
     border-radius: var(--radius);
-    padding: 12px 16px;
-    font-size: 14px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
     font-weight: 500;
-    margin-bottom: 20px;
+    margin-bottom: 1.25rem;
 }
 
 .form-control-custom.input-error,
@@ -46,8 +46,8 @@ html {
 
 .login-error-msg {
     color: var(--danger);
-    font-size: 13px;
-    margin-top: 6px;
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
     display: block;
 }
 
@@ -67,7 +67,7 @@ html {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 0.625rem;
     transition: background-color 0.2s ease;
 }
 
@@ -82,10 +82,10 @@ html {
 /* Spinner circular blanco */
 .btn-spinner {
     display: none;
-    width: 18px;
-    height: 18px;
-    border: 2.5px solid #ffffff;
-    border-top: 2.5px solid transparent;
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 0.1562rem solid #ffffff;
+    border-top: 0.1562rem solid transparent;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -97,9 +97,9 @@ html {
 
 /* Texto inferior "Campos y enlaces deshabilitados mientras se valida." */
 .info-validando {
-    font-size: 13px;
+    font-size: 0.8125rem;
     color: var(--text-muted);
-    margin-top: 12px;
+    margin-top: 0.75rem;
     margin-bottom: 0;
     text-align: left;
 }

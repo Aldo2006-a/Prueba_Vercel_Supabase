@@ -4,7 +4,7 @@
 
         .navbar {
             background-color: white;
-            min-height: 50px;
+            min-height: 3.125rem;
             border-bottom: 1px solid #eee;
         }
 
@@ -17,7 +17,7 @@
         .navbar .nav-link {
             color: #756b67;
             font-size: 0.9rem;
-            padding: 8px 12px !important;
+            padding: 0.5rem 0.75rem !important;
         }
 
         .navbar .nav-link:hover {
@@ -29,7 +29,7 @@
             font-size: 0.875rem;
             font-weight: 600;
             text-decoration: none;
-            margin-right: 15px;
+            margin-right: 0.9375rem;
         }
 
         .btn-login:hover {
@@ -40,10 +40,10 @@
             background-color: var(--rojo);
             color: white;
             border: none;
-            border-radius: 8px;
+            border-radius: 0.5rem;
             font-size: 0.875rem;
             font-weight: 600;
-            padding: 8px 16px;
+            padding: 0.5rem 1rem;
         }
 
         .btn-register:hover {

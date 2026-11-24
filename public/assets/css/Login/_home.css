@@ -35,7 +35,7 @@ body {
 
 .login-left {
     background-color: var(--rosa);
-    padding: 45px 60px;
+    padding: 2.8125rem 3.75rem;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -43,7 +43,7 @@ body {
 
 .login-left-content {
     width: 100%;
-    max-width: 440px;
+    max-width: 27.5rem;
     margin: 0 auto;
 }
 
@@ -52,19 +52,19 @@ body {
     font-weight: 800;
     line-height: 1.2;
     color: #281a16;
-    margin: 0 0 12px;
+    margin: 0 0 0.75rem;
 }
 
 .login-left p {
     color: #7d726e;
     font-size: 0.9rem;
     line-height: 1.5;
-    margin: 0 0 22px;
+    margin: 0 0 1.375rem;
 }
 
 .login-img-container {
     width: 100%;
-    border-radius: 14px;
+    border-radius: 0.875rem;
     overflow: hidden;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
 }
@@ -78,7 +78,7 @@ body {
 
 .login-right {
     background-color: #faf8f7;
-    padding: 30px;
+    padding: 1.875rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -90,10 +90,10 @@ body {
 
 .login-card {
     background-color: white;
-    border-radius: 14px;
-    padding: 30px 28px;
+    border-radius: 0.875rem;
+    padding: 1.875rem 1.75rem;
     width: 100%;
-    max-width: 380px;
+    max-width: 23.75rem;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
 }
 
@@ -101,7 +101,7 @@ body {
     font-size: 1.3rem;
     font-weight: 700;
     color: #281a16;
-    margin: 0 0 20px;
+    margin: 0 0 1.25rem;
 }
 
 .form-label-custom {
@@ -111,15 +111,15 @@ body {
     color: #796d68;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    margin-bottom: 5px;
+    margin-bottom: 0.3125rem;
 }
 
 .form-control-custom {
     width: 100%;
-    height: 40px;
+    height: 2.5rem;
     border: 1px solid #e8e2df;
-    border-radius: 8px;
-    padding: 0 12px;
+    border-radius: 0.5rem;
+    padding: 0 0.75rem;
     font-size: 0.85rem;
     color: #333;
     outline: none;
@@ -152,12 +152,12 @@ body {
     background-color: var(--rojo);
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 0.5rem;
     width: 100%;
-    height: 40px;
+    height: 2.5rem;
     font-size: 0.9rem;
     font-weight: 600;
-    margin-top: 14px;
+    margin-top: 0.875rem;
     cursor: pointer;
     transition: background-color 0.2s;
 }
@@ -170,7 +170,7 @@ body {
     text-align: center;
     font-size: 0.78rem;
     color: #796d68;
-    margin: 14px 0 0;
+    margin: 0.875rem 0 0;
 }
 
 .register-text a {
@@ -194,15 +194,22 @@ body {
     }
 
     .login-left {
-        padding: 35px 20px;
+        padding: 2.1875rem 1.25rem;
     }
 
     .login-right {
-        padding: 30px 20px;
+        padding: 1.875rem 1.25rem;
     }
 
     .login-left-content {
-        max-width: 600px;
+        max-width: 37.5rem;
+    }
+
+    /* La foto pasa a ser un banner recortado para no empujar el formulario */
+    .login-img-container img {
+        height: 13rem;
+        object-fit: cover;
+        object-position: center;
     }
 }
 
@@ -212,66 +219,70 @@ body {
 
 @media (max-width: 767px) {
     .navbar {
-        min-height: 52px;
+        min-height: 3.25rem;
     }
 
     .navbar .nav-link {
-        padding: 8px 0 !important;
+        padding: 0.5rem 0 !important;
     }
 
     .btn-login {
         display: inline-block;
-        margin: 10px 15px 10px 0;
+        margin: 0.625rem 0.9375rem 0.625rem 0;
     }
 
     .btn-register-outline {
         display: inline-block;
-        margin-bottom: 10px;
+        margin-bottom: 0.625rem;
     }
 
     .login-left {
-        padding: 25px 16px;
+        padding: 1.5625rem 1rem;
     }
 
     .login-left h1 {
         font-size: 1.55rem;
-        margin-bottom: 8px;
+        margin-bottom: 0.5rem;
     }
 
     .login-left p {
         font-size: 0.82rem;
-        margin-bottom: 15px;
+        margin-bottom: 0.9375rem;
     }
 
     .login-img-container {
-        border-radius: 10px;
+        border-radius: 0.625rem;
+    }
+
+    .login-img-container img {
+        height: 10rem;
     }
 
     .login-right {
-        padding: 20px 16px;
+        padding: 1.25rem 1rem;
     }
 
     .login-card {
-        padding: 24px 20px;
-        border-radius: 12px;
+        padding: 1.5rem 1.25rem;
+        border-radius: 0.75rem;
     }
 
     .login-card h2 {
         font-size: 1.2rem;
-        margin-bottom: 18px;
+        margin-bottom: 1.125rem;
     }
 
     footer {
-        padding: 12px 0;
+        padding: 0.75rem 0;
     }
 
     footer .container-fluid {
-        gap: 8px;
+        gap: 0.5rem;
     }
 
     .footer-brand,
     .footer-link {
-        margin-right: 12px;
+        margin-right: 0.75rem;
     }
 
     .copyright {
@@ -285,7 +296,7 @@ body {
 
 @media (max-width: 480px) {
     .login-left {
-        padding: 20px 14px;
+        padding: 1.25rem 0.875rem;
     }
 
     .login-left h1 {
@@ -296,21 +307,25 @@ body {
         font-size: 0.78rem;
     }
 
+    .login-img-container img {
+        height: 8.5rem;
+    }
+
     .login-right {
-        padding: 16px 12px;
+        padding: 1rem 0.75rem;
     }
 
     .login-card {
-        padding: 22px 17px;
+        padding: 1.375rem 1.0625rem;
     }
 
     .form-control-custom {
-        height: 38px;
+        height: 2.375rem;
         font-size: 0.8rem;
     }
 
     .btn-submit {
-        height: 38px;
+        height: 2.375rem;
         font-size: 0.85rem;
     }
 
@@ -320,6 +335,6 @@ body {
 
     .footer-brand,
     .footer-link {
-        margin-right: 8px;
+        margin-right: 0.5rem;
     }
 }

@@ -70,7 +70,7 @@ body {
     border: 1px solid var(--cp-border);
     color: #444;
     padding: 0.45rem 1rem;
-    border-radius: 50px;
+    border-radius: 3.125rem;
     font-size: 0.9rem;
     font-weight: 500;
     transition: all 0.2s ease;
@@ -103,7 +103,7 @@ body {
 
 .local-card {
     background: #ffffff;
-    border-radius: 14px;
+    border-radius: 0.875rem;
     border: 1px solid var(--cp-border);
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
@@ -112,13 +112,13 @@ body {
 }
 
 .local-card:hover {
-    transform: translateY(-4px);
+    transform: translateY(-0.25rem);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
     border-color: #e2cfc9;
 }
 
 .local-image {
-    height: 185px;
+    height: 11.5625rem;
     overflow: hidden;
     background-color: #f3f3f3;
 }
@@ -136,15 +136,15 @@ body {
 
 .time-pill {
     position: absolute;
-    bottom: 10px;
-    right: 10px;
+    bottom: 0.625rem;
+    right: 0.625rem;
     background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(0.25rem);
     color: #222;
     font-size: 0.78rem;
     font-weight: 600;
     padding: 0.25rem 0.65rem;
-    border-radius: 50px;
+    border-radius: 3.125rem;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
@@ -180,14 +180,14 @@ body {
 }
 
 .local-card:hover .action-link {
-    transform: translateX(3px);
+    transform: translateX(0.1875rem);
 }
 
 /* Estado vacío */
 .empty-state {
     background: #ffffff;
     border: 1px dashed #dcd6d3;
-    border-radius: 14px;
+    border-radius: 0.875rem;
     padding: 3rem 1.5rem;
     margin-top: 1rem;
 }

@@ -10,9 +10,10 @@
   <link rel="stylesheet" href="/assets/css/Login/_footerL.css">
   <link rel="stylesheet" href="/assets/css/Login/_home.css">
   <link rel="stylesheet" href="/assets/css/Login/_olvide.css">
+  <link rel="stylesheet" href="/assets/css/_escala.css">
 
 </head>
-<body class="min-vh-100 d-flex flex-column">
+<body class="min-vh-100 d-flex flex-column escala-fluida">
  
     <!-- NAVBAR -->
     <%- include('partials/Login/_navbar') %>
@@ -40,7 +41,7 @@
             <label for="email" class="form-label mb-2">Correo institucional</label>
             <input id="email" name="email" type="email" class="form-control" placeholder="nombre@aloe.ulima.edu.pe" autocomplete="email" required>
             <div class="invalid-feedback">Ingresa un correo institucional válido.</div>
-            <button id="btn-send" class="btn btn-primary w-100 mt-3" style="min-height:42px" type="submit">Enviar enlace</button>
+            <button id="btn-send" class="btn btn-primary w-100 mt-3" style="min-height:2.625rem" type="submit">Enviar enlace</button>
           </form>
  
           <p class="text-center mt-3 mb-0" style="font-size:.6875rem">
@@ -62,7 +63,7 @@
             Expira en 60 minutos.
           </p>
  
-          <button id="btn-resend" type="button" class="btn btn-soft w-100" style="min-height:42px" disabled>Reenviar enlace</button>
+          <button id="btn-resend" type="button" class="btn btn-soft w-100" style="min-height:2.625rem" disabled>Reenviar enlace</button>
           <p id="countdown" class="hint mt-3 mb-0" aria-live="polite">Podrás reenviarlo en 00:45</p>
         </div>
  
@@ -86,7 +87,7 @@
               <span id="strength-label" class="strength-label"></span>
             </div>
  
-            <button id="btn-save" class="btn btn-primary w-100 mt-3" style="min-height:42px" type="submit">Guardar contraseña</button>
+            <button id="btn-save" class="btn btn-primary w-100 mt-3" style="min-height:2.625rem" type="submit">Guardar contraseña</button>
           </form>
         </div>
  
