@@ -77,6 +77,7 @@ function CalificarPedido({ idPedido }) {
   };
 
   const handleEnviar = async () => {
+    if (enviando || enviado) return;
     setEnviando(true);
     setError('');
     try {
@@ -97,7 +98,29 @@ function CalificarPedido({ idPedido }) {
     return <main className="comensal-main-layout calificaciones-container"><p className="calif-subtitle">Cargando pedido…</p></main>;
   }
 
-  if (!pedido || pedido.status !== 'entregado' || (pedido.reviewed && !enviado)) {
+  // Calificación enviada: pantalla de confirmación (antes el formulario volvía a mostrarse con el botón activo)
+  if (enviado) {
+    return (
+      <main className="comensal-main-layout calificaciones-container">
+        <div className="calif-card calif-card--centrado">
+          <h2 className="locales-title" style={{ fontSize: '22px' }}>¡Calificación enviada!</h2>
+          <p className="locales-subtitle" style={{ marginBottom: '24px' }}>
+            Gracias por calificar tu pedido {pedido.code}. Tu opinión ayuda a otros comensales.
+          </p>
+          <div className="calif-actions" style={{ justifyContent: 'center' }}>
+            <button className="btn-secondary-action" onClick={() => navigate('/comensales/pedidos')}>
+              Volver a mis pedidos
+            </button>
+            <button className="btn-primary-action" onClick={() => navigate('/comensales/calificaciones')}>
+              Ver mis calificaciones
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!pedido || pedido.status !== 'entregado' || pedido.reviewed) {
     return (
       <main className="comensal-main-layout calificaciones-container">
         <div className="calif-card calif-card--centrado">
