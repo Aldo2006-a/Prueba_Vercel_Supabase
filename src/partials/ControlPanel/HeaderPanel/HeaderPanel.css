@@ -70,11 +70,28 @@
 }
 
 .enterprise-navbar__sede-name {
+    display: inline-flex;
+    align-items: center;
+    height: 30px;
+    margin-left: 16px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    border: 1px solid #4B403B;
+    border-radius: 7px;
+    background: #2A211E;
     color: #D8D0CC;
     font-size: 13px;
     font-weight: 500;
     line-height: 1;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Si el nombre del local aún no carga, no deja una cajita vacía */
+.enterprise-navbar__sede-name:empty {
+    display: none;
 }
 
 .enterprise-navbar__chevron {

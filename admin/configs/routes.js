@@ -74,6 +74,7 @@ router.post('/api/v1/register/comensal', registrationApis.registerDiner);
 router.post('/api/v1/register/local', registrationApis.registerStore);
 
 // api calificaciones: el comensal califica pedidos entregados; el local las ve y responde
+router.post('/api/v1/my-orders/:id/repeat', requireRole('comensal'), loadMyDiner, cartApis.repeatMyOrder);
 router.post('/api/v1/my-orders/:id/review', requireRole('comensal'), loadMyDiner, reviewApis.createMyReview);
 router.get('/api/v1/my-reviews', requireRole('comensal'), loadMyDiner, reviewApis.listMyReviews);
 router.get('/api/v1/stores/:id/reviews', requireAuth, reviewApis.listStoreReviews);

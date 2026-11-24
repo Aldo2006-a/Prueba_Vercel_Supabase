@@ -54,7 +54,7 @@ function ComensalApp() {
               element={<LocalesComensal setCarrito={setCarrito} />} 
             />
             
-            <Route path="/comensales/pedidos" element={<PedidosComensal />} />
+            <Route path="/comensales/pedidos" element={<PedidosComensal setCarrito={setCarrito} />} />
 
             <Route path="/comensales/calificaciones" element={<CalificacionesComensal />} />
             <Route path="/comensales/micuenta" element={<MiCuentaComensal />} />

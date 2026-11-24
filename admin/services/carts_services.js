@@ -1,6 +1,7 @@
 import cartRepository from '../repositories/carts_repository.js';
 import productRepository from '../repositories/products_repository.js';
 import optionGroupRepository from '../repositories/option_groups_repository.js';
+import orderRepository from '../repositories/orders_repository.js';
 import storeRepository from '../repositories/stores_repository.js';
 import { serviceError } from './errors.js';
 
@@ -243,4 +244,46 @@ export const clearCart = async (dinerId) => {
   await cartRepository.deleteByDiner(dinerId);
 
   return toView(null);
+};
+
+/**
+ * Repetir un pedido anterior: vuelve a agregar sus productos al carrito con las mismas opciones y notas.
+ * Las opciones se buscan por nombre en el producto actual. Lo que ya no se puede pedir
+ * (producto agotado o eliminado, opción obligatoria que cambió) se omite y se devuelve en "skipped".
+ * Con replace=true se vacía antes el carrito; si no y el carrito es de otro local responde 409 (CART_OTHER_STORE).
+ */
+export const repeatOrder = async (dinerId, orderId, data = {}) => {
+  const order = await orderRepository.findByIdAndDiner(orderId, dinerId);
+
+  if (!order) {
+    throw serviceError(404, 'ORDER_NOT_FOUND', 'Pedido no encontrado');
+  }
+
+  if (data.replace === true) {
+    await cartRepository.deleteByDiner(dinerId);
+  }
+
+  const skipped = [];
+
+  for (const item of order.items) {
+    if (!item.product_id) {
+      skipped.push(item.product_name);
+      continue;
+    }
+
+    const groups = await optionGroupRepository.findAllByProduct(item.product_id);
+    const current = groups.flatMap((group) => group.options);
+    const options = item.options
+      .map((option) => current.find((candidate) => candidate.name === option.option_name)?.id)
+      .filter(Boolean);
+
+    try {
+      await addItem(dinerId, { product_id: item.product_id, quantity: item.quantity, notes: item.notes, options });
+    } catch (error) {
+      if (error.code === 'CART_OTHER_STORE') throw error;
+      skipped.push(item.product_name);
+    }
+  }
+
+  return { cart: await fetchCart(dinerId), skipped };
 };

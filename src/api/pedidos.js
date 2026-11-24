@@ -20,6 +20,11 @@ export const cambiarCantidadCarrito = async (idItem, quantity) =>
 
 export const quitarDelCarrito = async (idItem) => datos(await api.delete(`/my-cart/items/${idItem}`));
 
+// Vuelve a agregar al carrito los productos de un pedido anterior.
+// Devuelve { cart, skipped }; con replace=true vacía antes el carrito.
+export const repetirPedido = async (idPedido, replace = false) =>
+  datos(await api.post(`/my-orders/${idPedido}/repeat`, { replace }));
+
 export const vaciarCarrito = async () => datos(await api.delete('/my-cart'));
 
 /* ---------- Pedidos del comensal ---------- */

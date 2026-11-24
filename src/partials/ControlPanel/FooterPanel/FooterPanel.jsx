@@ -1,10 +1,16 @@
 //src\partials\FooterEnterprise.jsx
+import { useEffect, useState } from 'react'
+import { obtenerMiLocal } from '../../../api/locales'
 import './FooterPanel.css'
 
 export default function PieEnterprise() {
     const soporte = 'campuspide@ulima.edu.pe'
     const anexo = '1180'
-    const sede = 'Cafetería Central'
+    const [sede, setSede] = useState('')
+
+    useEffect(() => {
+        obtenerMiLocal().then((local) => setSede(local.commercial_name)).catch(() => setSede(''))
+    }, [])
 
     return (
         <footer className="enterprise-footer">

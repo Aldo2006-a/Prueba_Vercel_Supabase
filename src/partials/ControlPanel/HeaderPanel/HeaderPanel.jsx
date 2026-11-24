@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { obtenerMiLocal, obtenerMiPerfil } from '../../../api/locales'
 import './HeaderPanel.css'
 import './HeaderPanel.menus.css'   // estilos de los menús desplegables
-
-// Datos de ejemplo (luego los reemplazas por tu API / sesión)
-const SEDES = [
-  'Cafetería Central',
-  'Sanguchería Pabellón E',
-  'Café de Biblioteca',
-  'Juguería La Fuente',
-]
 
 const ESTADOS = [
   { id: 'abierto',    label: 'Abierto',              corto: 'Abierto',    desc: 'Recibiendo pedidos con normalidad' },
@@ -18,13 +11,19 @@ const ESTADOS = [
 ]
 
 export default function HeaderPanel() {
-  const [sede, setSede] = useState(SEDES[0])
+  const [sede, setSede] = useState('')           // nombre del local en sesión
+  const [perfil, setPerfil] = useState(null)
   const [estado, setEstado] = useState('abierto')
   const [menu, setMenu] = useState(null) // 'sede' | 'estado' | 'usuario' | null
 
   const rolUsuario = 'Encargado'
-  const nombreUsuario = 'Carlos Campos'
-  const inicialesUsuario = 'CC'
+  const nombreUsuario = perfil ? perfil.name : ''
+  const inicialesUsuario = perfil ? perfil.initials : ''
+
+  useEffect(() => {
+    obtenerMiLocal().then((local) => setSede(local.commercial_name)).catch(() => setSede(''))
+    obtenerMiPerfil().then(setPerfil).catch(() => setPerfil(null))
+  }, [])
 
   const navRef = useRef(null)
 
@@ -46,7 +45,6 @@ export default function HeaderPanel() {
 
   const alternar = (nombre) => setMenu((actual) => (actual === nombre ? null : nombre))
 
-  const elegirSede = (s) => { setSede(s); setMenu(null) }
   const elegirEstado = (id) => { setEstado(id); setMenu(null) }
 
   const estadoActual = ESTADOS.find((e) => e.id === estado)
@@ -65,38 +63,8 @@ export default function HeaderPanel() {
 
         <span className="enterprise-navbar__panel">Panel del local</span>
 
-        {/* ===== Selector de sede ===== */}
-        <div className="enterprise-navbar__dropdown enterprise-navbar__dropdown--sede">
-          <button
-            type="button"
-            className="enterprise-navbar__sede"
-            aria-haspopup="menu"
-            aria-expanded={menu === 'sede'}
-            onClick={() => alternar('sede')}
-          >
-            <span className="enterprise-navbar__sede-name">{sede}</span>
-            <span className="enterprise-navbar__chevron">▾</span>
-          </button>
-
-          {menu === 'sede' && (
-            <div className="enterprise-navbar__menu enterprise-navbar__menu--left" role="menu">
-              <p className="enterprise-navbar__menu-title">Cambiar de local</p>
-              {SEDES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={s === sede}
-                  className={`enterprise-navbar__menu-item ${s === sede ? 'is-selected' : ''}`}
-                  onClick={() => elegirSede(s)}
-                >
-                  <span>{s}</span>
-                  {s === sede && <span className="enterprise-navbar__check">✓</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* ===== Local en sesión ===== */}
+        <span className="enterprise-navbar__sede-name">{sede}</span>
 
       </div>
 

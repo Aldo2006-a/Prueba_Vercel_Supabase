@@ -8,6 +8,9 @@ const api = axios.create({ baseURL: '/api/v1', withCredentials: true });
 const datos = (respuesta) => respuesta.data.data;
 
 /* ---------- Llamadas ---------- */
+// Local del usuario en sesión (panel del local)
+export const obtenerMiLocal = async () => datos(await api.get('/my-store'));
+
 export const obtenerLocales = async () => datos(await api.get('/stores'));
 
 // Un local con su horario (la pantalla de confirmación lo usa para armar las franjas)

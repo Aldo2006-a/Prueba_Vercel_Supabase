@@ -23,6 +23,19 @@ export const addToMyCart = async (req, res) => {
   }
 };
 
+export const repeatMyOrder = async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return invalidId(res);
+
+    const result = await cartService.repeatOrder(req.diner.id, id, req.body || {});
+
+    return ok(res, 'Pedido agregado al carrito', result);
+  } catch (error) {
+    return fail(res, error, 'Error al repetir el pedido');
+  }
+};
+
 export const updateMyCartItem = async (req, res) => {
   try {
     const id = parseId(req.params.id);

@@ -24,9 +24,11 @@ body {
 
 /* Cabecera */
 .app-header {
-    height: 46px;
-    min-height: 46px;
+    height: 52px;      /* igual que .enterprise-navbar en HeaderPanel.css */
+    min-height: 52px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1000;     /* los menús desplegables quedan por encima del sidebar y el contenido */
 }
 
 /* Cuerpo */

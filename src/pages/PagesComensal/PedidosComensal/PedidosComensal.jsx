@@ -7,6 +7,7 @@ import {
   fechaCorta,
   ETIQUETA_ESTADO,
   ESTADOS_EN_CURSO,
+  repetirPedido,
 } from '../../../api/pedidos';
 import { mensajeDeError } from '../../../api/carta';
 import './PedidosComensal.css';
@@ -25,7 +26,7 @@ const CLASE_ESTADO = {
 // Cada cuánto se vuelve a pedir la lista para ver cambios de estado (ms)
 const REFRESCO_MS = 15000;
 
-export default function PedidosComensal() {
+export default function PedidosComensal({ setCarrito }) {
   const navigate = useNavigate();
 
   const [pedidos, setPedidos] = useState([]);
@@ -33,6 +34,34 @@ export default function PedidosComensal() {
   const [error, setError] = useState('');
   const [filtroLocal, setFiltroLocal] = useState('todos');
   const [abierto, setAbierto] = useState(null); // id del pedido con el detalle desplegado
+  const [repitiendo, setRepitiendo] = useState(null); // id del pedido que se está repitiendo
+
+  // Vuelve a poner en el carrito lo que pediste. Si el carrito es de otro local, se ofrece vaciarlo.
+  const handleRepetir = async (pedido) => {
+    setRepitiendo(pedido.id);
+    setError('');
+
+    try {
+      let resultado;
+      try {
+        resultado = await repetirPedido(pedido.id);
+      } catch (e) {
+        if (e?.response?.data?.error !== 'CART_OTHER_STORE') throw e;
+        if (!window.confirm(`${e.response.data.message}.\n\n¿Vaciar el carrito y repetir este pedido?`)) return;
+        resultado = await repetirPedido(pedido.id, true);
+      }
+
+      setCarrito(resultado.cart);
+      if (resultado.skipped.length > 0) {
+        window.alert(`No se pudo agregar (ya no disponible): ${resultado.skipped.join(', ')}.`);
+      }
+      navigate('/comensales/carrito');
+    } catch (e) {
+      setError(mensajeDeError(e, 'No se pudo repetir el pedido.'));
+    } finally {
+      setRepitiendo(null);
+    }
+  };
 
   useEffect(() => {
     let activo = true;
@@ -107,6 +136,16 @@ export default function PedidosComensal() {
             >
               {desplegado ? 'Ocultar detalle' : 'Ver detalle'}
             </button>
+            {(p.status === 'entregado' || p.status === 'rechazado') && (
+              <button
+                className="btn-secondary-action"
+                style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px" }}
+                disabled={repitiendo === p.id}
+                onClick={() => handleRepetir(p)}
+              >
+                {repitiendo === p.id ? 'Agregando...' : 'Repetir pedido'}
+              </button>
+            )}
             {esEntregado && p.reviewed && (
               <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Calificado ✓</span>
             )}
