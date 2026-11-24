@@ -68,7 +68,7 @@ export default function SelectorProductos({
                             onClick={() => onSeleccionarProducto(prod.id)}
                         >
                             <div className="producto-card-img">
-                                <img src={prod.imagen} alt={prod.nombre} />
+                                {prod.imagen && <img src={prod.imagen} alt={prod.nombre} />}
                                 <span className="producto-cat-badge">{prod.categoria}</span>
                             </div>
 

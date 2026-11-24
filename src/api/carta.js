@@ -58,6 +58,7 @@ export const productoACarta = (producto) => ({
   status: producto.available ? 'Disponible' : 'Agotado',
   price: Number(producto.price).toFixed(2),
   category_id: producto.category_id,
+  picture_url: producto.picture_url,
   raw: producto,
 });
 
@@ -86,3 +87,29 @@ export const actualizarGrupo = async (grupoId, grupo) =>
   datos(await api.put(`/my-store/option-groups/${grupoId}`, grupo));
 
 export const eliminarGrupoApi = async (grupoId) => api.delete(`/my-store/option-groups/${grupoId}`);
+
+/* ---------- Fotos (se guardan en public/assets/img/uploads) ---------- */
+const TIPOS_IMAGEN = ['image/png', 'image/jpeg', 'image/webp'];
+const MAX_IMAGEN = 3 * 1024 * 1024;
+
+// Valida el archivo elegido y lo convierte en data URL; lanza Error con un mensaje para mostrar
+export const archivoADataUrl = (archivo) =>
+  new Promise((resolve, reject) => {
+    if (!TIPOS_IMAGEN.includes(archivo.type)) return reject(new Error('La imagen debe ser PNG, JPG o WEBP.'));
+    if (archivo.size > MAX_IMAGEN) return reject(new Error('La imagen debe pesar menos de 3 MB.'));
+
+    const lector = new FileReader();
+    lector.onload = () => resolve(lector.result);
+    lector.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+    lector.readAsDataURL(archivo);
+  });
+
+export const subirFotoProducto = async (productoId, image) =>
+  datos(await api.post(`/my-store/products/${productoId}/picture`, { image }));
+
+export const quitarFotoProducto = async (productoId) =>
+  datos(await api.delete(`/my-store/products/${productoId}/picture`));
+
+export const subirLogoLocal = async (image) => datos(await api.put('/my-store/logo', { image }));
+
+export const quitarLogoLocal = async () => datos(await api.delete('/my-store/logo'));

@@ -15,6 +15,10 @@ import './LocalesComensal.css';
 
 // Los locales y sus cartas vienen de la API (ver src/api/locales.js)
 
+// Estilo del recuadro de foto: la imagen real si existe; si no, el placeholder con rayas
+const FONDO_RAYAS = "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)";
+const fondoFoto = (url) => (url ? `center / cover no-repeat url(${url})` : FONDO_RAYAS);
+
 export default function LocalesComensal({ setCarrito }) {
   const navigate = useNavigate();
 
@@ -270,17 +274,18 @@ export default function LocalesComensal({ setCarrito }) {
               const esCerrado = local.estado === "Cerrado";
               return (
                 <article key={local.id} className={`local-card ${esCerrado ? "local-card--cerrado" : ""}`}>
-                  <div className="local-card-image-placeholder">foto local</div>
+                  <div className="local-card-image-placeholder" style={local.logo ? { background: fondoFoto(local.logo) } : undefined}>{local.logo ? "" : "foto local"}</div>
                   <div className="local-card-body">
                     <div className="local-title-row">
                       <h3>{local.nombre}</h3>
-                      <span className={esCerrado ? "status-pill pill-closed" : "status-pill pill-open"}>
+                      <span className={esCerrado || local.estado === "Suspendido" ? "status-pill pill-closed" : "status-pill pill-open"}>
                         {local.estado}
                       </span>
                     </div>
                     <p className="local-location-info">{local.ubicacion}</p>
                     <p className="local-time-rating">
                       {esCerrado && local.aperturaProx ? `Abre ${local.aperturaProx} · ` : ""}
+                      {local.estado === "Suspendido" ? "Sin recepción de pedidos por ahora · " : ""}
                       {local.tiempoPrep ? `${local.tiempoPrep} · ` : ""}
                       <button className="btn-link-resenas" onClick={() => setLocalResenas(local)}>
                         Ver reseñas
@@ -316,8 +321,8 @@ export default function LocalesComensal({ setCarrito }) {
 
           <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", boxShadow: "var(--shadow-warm)" }}>
             <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-              <div style={{ width: "56px", height: "56px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", borderRadius: "var(--radius-container)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
-                foto
+              <div style={{ width: "56px", height: "56px", background: fondoFoto(localSeleccionado.logo), borderRadius: "var(--radius-container)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
+                {localSeleccionado.logo ? "" : "foto"}
               </div>
               <div>
                 <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
@@ -407,8 +412,8 @@ export default function LocalesComensal({ setCarrito }) {
             <div className="productos-grid">
               {productosFiltrados.map((prod) => (
                 <div key={prod.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-card)", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "var(--shadow-warm)", opacity: prod.agotado ? 0.5 : 1 }}>
-                  <div style={{ height: "140px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
-                    foto 1:1
+                  <div style={{ height: "140px", background: fondoFoto(prod.imagen), display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
+                    {prod.imagen ? "" : "foto 1:1"}
                   </div>
                   <div style={{ padding: "16px", flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
                     <div>
@@ -451,8 +456,8 @@ export default function LocalesComensal({ setCarrito }) {
             {/* PRODUCTO AGOTADO */}
             {productoDetalle.agotado ? (
               <div style={{ textAlign: "center", padding: "12px 0" }}>
-                <div style={{ height: "160px", width: "160px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", borderRadius: "var(--radius-card)", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
-                  foto 1:1
+                <div style={{ height: "160px", width: "160px", background: fondoFoto(productoDetalle.imagen), borderRadius: "var(--radius-card)", margin: "0 auto 16px", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
+                  {productoDetalle.imagen ? "" : "foto 1:1"}
                 </div>
                 <h2 className="section-title" style={{ margin: 0 }}>
                   {productoDetalle.nombre} <span className="status-pill pill-closed" style={{ marginLeft: "8px" }}>Agotado</span>
@@ -467,8 +472,8 @@ export default function LocalesComensal({ setCarrito }) {
               /* PRODUCTO DISPONIBLE / OPCIONES */
               <div className="detalle-layout">
                 <div>
-                  <div style={{ height: "200px", background: "repeating-linear-gradient(-45deg, #FCEAE7, #FCEAE7 5px, #EFE2DC 5px, #EFE2DC 10px)", borderRadius: "var(--radius-card)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
-                    foto 1:1
+                  <div style={{ height: "200px", background: fondoFoto(productoDetalle.imagen), borderRadius: "var(--radius-card)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: "12px" }}>
+                    {productoDetalle.imagen ? "" : "foto 1:1"}
                   </div>
                   <p style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "12px" }}>
                     {localSeleccionado?.nombre}

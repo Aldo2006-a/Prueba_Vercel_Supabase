@@ -11,6 +11,14 @@ const datos = (respuesta) => respuesta.data.data;
 // Local del usuario en sesión (panel del local)
 export const obtenerMiLocal = async () => datos(await api.get('/my-store'));
 
+// Estado de recepción del local: 'abierto' | 'suspendido' | 'cerrado'.
+// Avisa a las demás partes de la pantalla (encabezado y Agotados) para que no se desfasen.
+export const cambiarEstadoLocal = async (status) => {
+  const local = datos(await api.put('/my-store/status', { status }));
+  window.dispatchEvent(new CustomEvent('estado-local', { detail: local.reception_status }));
+  return local;
+};
+
 export const obtenerLocales = async () => datos(await api.get('/stores'));
 
 // Un local con su horario (la pantalla de confirmación lo usa para armar las franjas)
@@ -32,15 +40,17 @@ const textoApertura = (proxima) => {
 };
 
 // Local de la base de datos -> tarjeta de "Locales del campus".
-// El estado Abierto/Cerrado sale del horario del local (hora de Lima).
+// El estado sale del horario del local (hora de Lima) y de lo que elige el dueño (Suspendido / Cerrado).
 // Aún no hay reseñas en la base, por eso sin tiempo/calificación.
 export const localALista = (local) => ({
   id: local.id,
   nombre: local.commercial_name,
-  estado: local.open_now ? 'Abierto' : 'Cerrado',
+  estado:
+    local.reception_status === 'suspendido' ? 'Suspendido' : local.open_now ? 'Abierto' : 'Cerrado',
   ubicacion: local.campus_location || '',
   tiempoPrep: '',
   calificacion: local.rating_average ?? null,
+  logo: local.logo_url || null,
   aperturaProx: textoApertura(local.next_open),
 });
 
@@ -54,6 +64,7 @@ export const productoAComensal = (producto) => ({
   categoriaOrden: producto.category ? producto.category.display_order : 0,
   categoriaId: producto.category_id,
   agotado: !producto.available,
+  imagen: producto.picture_url || null,
   tiempoPrep: producto.preparation_time,
   // Grupos de opciones y agregados que el comensal puede elegir
   grupos: (producto.option_groups || []).map((g) => ({

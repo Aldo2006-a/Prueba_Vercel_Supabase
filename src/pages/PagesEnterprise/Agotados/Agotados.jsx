@@ -1,66 +1,88 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './Agotados.css';
-
-const PEDIDOS_EN_CURSO = 4;
+import { obtenerProductos, actualizarProducto, mensajeDeError } from '../../../api/carta';
+import { obtenerMiLocal, cambiarEstadoLocal } from '../../../api/locales';
+import { obtenerPedidosLocal, ESTADOS_EN_CURSO } from '../../../api/pedidos';
 
 const ESTADOS_LOCAL = [
     { id: 'abierto',    titulo: 'Abierto',              desc: 'Recibiendo pedidos con normalidad.' },
     { id: 'suspendido', titulo: 'Recepción suspendida', desc: 'Sigues visible en el directorio, pero no aceptas nuevos pedidos.' },
-    { id: 'cerrado',    titulo: 'Cerrado',              desc: 'Apareces como cerrado hasta tu próximo horario de atención.' },
+    { id: 'cerrado',    titulo: 'Cerrado',              desc: 'Apareces como cerrado hasta que vuelvas a abrir.' },
 ];
 
-// Datos de ejemplo (luego los reemplazas por tu API)
-const PRODUCTOS_INICIALES = [
-    { id: 1,  nombre: 'Sándwich de pollo deshilachado', categoria: 'Sándwiches',   precio: 9.5,  agotado: false },
-    { id: 2,  nombre: 'Empanada de carne',              categoria: 'Snacks',       precio: 5.0,  agotado: true },
-    { id: 3,  nombre: 'Menú ejecutivo',                 categoria: 'Menú del día', precio: 14.0, agotado: false },
-    { id: 4,  nombre: 'Chicha morada',                  categoria: 'Jugos y bebidas', precio: 4.5, agotado: true },
-    { id: 5,  nombre: 'Café pasado',                    categoria: 'Café',         precio: 3.5,  agotado: false },
-    { id: 6,  nombre: 'Ensalada de frutas',             categoria: 'Desayunos',    precio: 7.0,  agotado: true },
-    { id: 7,  nombre: 'Jugo surtido',                   categoria: 'Jugos y bebidas', precio: 6.5, agotado: false },
-    { id: 8,  nombre: 'Alfajor de maicena',             categoria: 'Snacks',       precio: 3.5,  agotado: false },
-    { id: 9,  nombre: 'Sándwich de jamón y queso',      categoria: 'Sándwiches',   precio: 8.0,  agotado: false },
-    { id: 10, nombre: 'Tostadas con palta',             categoria: 'Desayunos',    precio: 8.5,  agotado: false },
-    { id: 11, nombre: 'Café con leche',                 categoria: 'Café',         precio: 4.5,  agotado: false },
-    { id: 12, nombre: 'Capuchino',                      categoria: 'Café',         precio: 6.0,  agotado: false },
-    { id: 13, nombre: 'Limonada frozen',                categoria: 'Jugos y bebidas', precio: 6.0, agotado: false },
-    { id: 14, nombre: 'Menú light',                     categoria: 'Menú del día', precio: 13.0, agotado: false },
-    { id: 15, nombre: 'Ensalada César',                 categoria: 'Menú del día', precio: 11.0, agotado: false },
-    { id: 16, nombre: 'Empanada de pollo',              categoria: 'Snacks',       precio: 5.0,  agotado: false },
-    { id: 17, nombre: 'Keke de zanahoria',              categoria: 'Snacks',       precio: 4.0,  agotado: false },
-    { id: 18, nombre: 'Yogur con granola',              categoria: 'Desayunos',    precio: 6.5,  agotado: false },
-];
-
-const soles = (n) => `S/ ${n.toFixed(2)}`;
+const soles = (n) => `S/ ${Number(n).toFixed(2)}`;
 
 export default function Agotados() {
     const [estadoLocal, setEstadoLocal] = useState('abierto');
-    const [productos, setProductos] = useState(PRODUCTOS_INICIALES);
+    const [productos, setProductos] = useState([]);
+    const [pedidosEnCurso, setPedidosEnCurso] = useState(0);
     const [aviso, setAviso] = useState('');
+    const [error, setError] = useState('');
+    const [cargando, setCargando] = useState(true);
 
-    const totalAgotados = useMemo(() => productos.filter((p) => p.agotado).length, [productos]);
+    useEffect(() => {
+        Promise.all([obtenerMiLocal(), obtenerProductos(), obtenerPedidosLocal()])
+            .then(([local, lista, pedidos]) => {
+                setEstadoLocal(local.reception_status);
+                setProductos(lista);
+                setPedidosEnCurso(pedidos.filter((p) => ESTADOS_EN_CURSO.includes(p.status)).length);
+            })
+            .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar la información del local.')))
+            .finally(() => setCargando(false));
 
-    const cambiarEstado = (id) => {
+        // Si el estado se cambia desde el encabezado, esta pantalla se actualiza
+        const alCambiar = (e) => setEstadoLocal(e.detail);
+        window.addEventListener('estado-local', alCambiar);
+        return () => window.removeEventListener('estado-local', alCambiar);
+    }, []);
+
+    const totalAgotados = useMemo(() => productos.filter((p) => !p.available).length, [productos]);
+
+    const cambiarEstado = async (id) => {
+        const anterior = estadoLocal;
         setEstadoLocal(id);
-        const e = ESTADOS_LOCAL.find((x) => x.id === id);
-        setAviso(`Estado del local: ${e.titulo}. Se aplicó de inmediato.`);
+        setError('');
+        try {
+            await cambiarEstadoLocal(id);
+            const e = ESTADOS_LOCAL.find((x) => x.id === id);
+            setAviso(`Estado del local: ${e.titulo}. Se aplicó de inmediato.`);
+        } catch (err) {
+            setEstadoLocal(anterior);
+            setError(mensajeDeError(err, 'No se pudo cambiar el estado del local.'));
+        }
     };
 
-    const alternar = (id) => {
+    // Marca o desmarca un producto como agotado (campo available de la base)
+    const ponerDisponible = async (producto, available) => {
+        await actualizarProducto(producto.id, { available });
+        setProductos((prev) => prev.map((x) => (x.id === producto.id ? { ...x, available } : x)));
+    };
+
+    const alternar = async (id) => {
         const p = productos.find((x) => x.id === id);
-        const nuevo = !p.agotado;
-        setProductos((prev) => prev.map((x) => (x.id === id ? { ...x, agotado: nuevo } : x)));
-        setAviso(
-            nuevo
-                ? `«${p.nombre}» quedó marcada como agotada. Se muestra atenuada en la carta del comensal.`
-                : `«${p.nombre}» vuelve a estar disponible en la carta del comensal.`
-        );
+        const agotar = p.available;
+        setError('');
+        try {
+            await ponerDisponible(p, !agotar);
+            setAviso(
+                agotar
+                    ? `«${p.name}» quedó marcada como agotada. Se muestra atenuada en la carta del comensal.`
+                    : `«${p.name}» vuelve a estar disponible en la carta del comensal.`
+            );
+        } catch (err) {
+            setError(mensajeDeError(err, 'No se pudo actualizar el producto.'));
+        }
     };
 
-    const restablecer = () => {
+    const restablecer = async () => {
         if (totalAgotados === 0) return;
-        setProductos((prev) => prev.map((x) => ({ ...x, agotado: false })));
-        setAviso('Se restablecieron todos los productos. Todos están disponibles.');
+        setError('');
+        try {
+            for (const p of productos.filter((x) => !x.available)) await ponerDisponible(p, true);
+            setAviso('Se restablecieron todos los productos. Todos están disponibles.');
+        } catch (err) {
+            setError(mensajeDeError(err, 'No se pudieron restablecer todos los productos.'));
+        }
     };
 
     return (
@@ -99,7 +121,7 @@ export default function Agotados() {
                         </div>
 
                         <p className="estado-nota">
-                            Tienes {PEDIDOS_EN_CURSO} pedidos en curso. Suspender la recepción no cancela los
+                            Tienes {pedidosEnCurso} {pedidosEnCurso === 1 ? 'pedido' : 'pedidos'} en curso. Suspender la recepción no cancela los
                             pedidos ya aceptados.
                         </p>
                     </section>
@@ -111,7 +133,7 @@ export default function Agotados() {
                                 <div>
                                     <h2 className="panel-title">Agotados del día</h2>
                                     <p className="panel-sub">
-                                        {totalAgotados} de {productos.length} productos marcados como agotados
+                                        {cargando ? 'Cargando…' : `${totalAgotados} de ${productos.length} productos marcados como agotados`}
                                     </p>
                                 </div>
                                 <button
@@ -135,21 +157,21 @@ export default function Agotados() {
                                     </thead>
                                     <tbody>
                                         {productos.map((p) => (
-                                            <tr key={p.id} className={p.agotado ? 'fila-agotada' : ''}>
-                                                <td>{p.nombre}</td>
-                                                <td className="col-cat muted">{p.categoria}</td>
-                                                <td className="precio">{soles(p.precio)}</td>
+                                            <tr key={p.id} className={!p.available ? 'fila-agotada' : ''}>
+                                                <td>{p.name}</td>
+                                                <td className="col-cat muted">{p.category?.name || 'Sin categoría'}</td>
+                                                <td className="precio">{soles(p.price)}</td>
                                                 <td>
                                                     <label className="toggle">
                                                         <input
                                                             type="checkbox"
                                                             className="switch"
-                                                            checked={p.agotado}
+                                                            checked={!p.available}
                                                             onChange={() => alternar(p.id)}
-                                                            aria-label={`Marcar ${p.nombre} como agotado`}
+                                                            aria-label={`Marcar ${p.name} como agotado`}
                                                         />
-                                                        <span className={p.agotado ? 'toggle-si' : 'toggle-no'}>
-                                                            {p.agotado ? 'Sí' : 'No'}
+                                                        <span className={!p.available ? 'toggle-si' : 'toggle-no'}>
+                                                            {!p.available ? 'Sí' : 'No'}
                                                         </span>
                                                     </label>
                                                 </td>
@@ -159,6 +181,8 @@ export default function Agotados() {
                                 </table>
                             </div>
                         </div>
+
+                        {error && <p className="agotados-aviso text-danger" role="alert">{error}</p>}
 
                         {aviso && (
                             <p className="agotados-aviso" role="status">

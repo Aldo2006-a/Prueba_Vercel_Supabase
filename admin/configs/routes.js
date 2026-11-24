@@ -16,6 +16,7 @@ import * as orderApis from '../apis/orders_apis.js';
 import * as scheduleApis from '../apis/schedules_apis.js';
 import * as optionGroupApis from '../apis/option_groups_apis.js';
 import * as reviewApis from '../apis/reviews_apis.js';
+import * as storeProfileApis from '../apis/store_profile_apis.js';
 import * as registrationApis from '../apis/registration_apis.js';
 import * as storeRequestApis from '../apis/store_requests_apis.js';
 import { loadMyDiner } from '../apis/diners_apis.js';
@@ -93,6 +94,7 @@ router.get('/api/v1/stores/:id/products', requireAuth, productApis.listStoreProd
 
 // api mi local: categorías y productos (solo enterprises, sobre SU local)
 router.get('/api/v1/my-store', requireRole('enterprises'), storeApis.loadMyStore, storeApis.getMyStore);
+router.put('/api/v1/my-store/status', requireRole('enterprises'), storeApis.loadMyStore, storeApis.setMyReceptionStatus);
 
 router.get('/api/v1/my-store/categories', requireRole('enterprises'), storeApis.loadMyStore, categoryApis.listMyCategories);
 router.post('/api/v1/my-store/categories', requireRole('enterprises'), storeApis.loadMyStore, categoryApis.createMyCategory);
@@ -104,6 +106,18 @@ router.post('/api/v1/my-store/products', requireRole('enterprises'), storeApis.l
 router.get('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.getMyProductById);
 router.put('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.updateMyProduct);
 router.delete('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.deleteMyProduct);
+
+// api perfil del local: datos, contacto y galería de fotografías
+router.get('/api/v1/my-store/profile', requireRole('enterprises'), storeApis.loadMyStore, storeProfileApis.getMyProfile);
+router.put('/api/v1/my-store/profile', requireRole('enterprises'), storeApis.loadMyStore, storeProfileApis.updateMyProfile);
+router.post('/api/v1/my-store/photos', requireRole('enterprises'), storeApis.loadMyStore, storeProfileApis.addMyPhoto);
+router.delete('/api/v1/my-store/photos/:id', requireRole('enterprises'), storeApis.loadMyStore, storeProfileApis.deleteMyPhoto);
+
+// api fotos: producto (carpeta public/assets/img/uploads/products) y logo del local (uploads/stores)
+router.post('/api/v1/my-store/products/:id/picture', requireRole('enterprises'), storeApis.loadMyStore, productApis.setMyProductPicture);
+router.delete('/api/v1/my-store/products/:id/picture', requireRole('enterprises'), storeApis.loadMyStore, productApis.deleteMyProductPicture);
+router.put('/api/v1/my-store/logo', requireRole('enterprises'), storeApis.loadMyStore, storeApis.setMyLogo);
+router.delete('/api/v1/my-store/logo', requireRole('enterprises'), storeApis.loadMyStore, storeApis.deleteMyLogo);
 
 // api opciones y agregados de los productos (solo enterprises)
 router.get('/api/v1/my-store/products/:productId/option-groups', requireRole('enterprises'), storeApis.loadMyStore, optionGroupApis.listMyOptionGroups);

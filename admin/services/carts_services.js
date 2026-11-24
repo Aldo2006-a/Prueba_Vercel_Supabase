@@ -151,6 +151,10 @@ export const addItem = async (dinerId, data = {}) => {
     throw serviceError(404, 'PRODUCT_NOT_FOUND', 'Producto no encontrado');
   }
 
+  if (store.reception_status !== 'abierto') {
+    throw serviceError(409, 'STORE_NOT_RECEIVING', 'El local no está recibiendo pedidos en este momento');
+  }
+
   if (!product.available) {
     throw serviceError(409, 'PRODUCT_UNAVAILABLE', 'El producto está agotado');
   }

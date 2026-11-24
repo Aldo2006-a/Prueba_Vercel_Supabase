@@ -121,7 +121,7 @@
               Tras el registro un administrador revisa el RUC y la ubicación declarada.
               Cuando tu solicitud sea aprobada podrás iniciar sesión con el correo y la contraseña que registraste
               para publicar tu carta y recibir pedidos.
-              El logotipo aún no se guarda: podrás subirlo más adelante.
+              El logotipo es opcional (PNG, JPG o WEBP de hasta 3 MB).
             </div>
           </aside>
         </div>
@@ -210,15 +210,24 @@
       }
 
       // 2. Validar tamaño del logo si se adjuntó alguno
-      if (logoInput.files.length > 0 && logoInput.files[0].size > 5 * 1024 * 1024) {
-        mostrarMensaje('El logotipo debe pesar menos de 5 MB.', '#dc3545');
+      if (logoInput.files.length > 0 && logoInput.files[0].size > 3 * 1024 * 1024) {
+        mostrarMensaje('El logotipo debe pesar menos de 3 MB.', '#dc3545');
         return;
       }
 
-      // 3. Enviar la solicitud a la API
+      // 3. Enviar la solicitud a la API (el logo, si lo hay, viaja como data URL)
       const botonEnviar = form.querySelector('button[type="submit"]');
       botonEnviar.disabled = true;
       try {
+        const logo = logoInput.files.length > 0
+          ? await new Promise((resolve, reject) => {
+              const lector = new FileReader();
+              lector.onload = () => resolve(lector.result);
+              lector.onerror = reject;
+              lector.readAsDataURL(logoInput.files[0]);
+            })
+          : undefined;
+
         const respuesta = await fetch('/api/v1/register/local', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -232,6 +241,7 @@
             password: valor('contrasena'),
             confirm_password: valor('confirmarContrasena'),
             authorization: document.getElementById('autorizacion').checked,
+            logo,
           }),
         });
         const resultado = await respuesta.json();

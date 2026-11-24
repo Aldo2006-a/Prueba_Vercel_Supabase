@@ -73,3 +73,27 @@ export const getStoreById = async (req, res) => {
 export const getMyStore = async (req, res) => {
   return ok(res, 'Local obtenido correctamente', req.store);
 };
+
+export const setMyReceptionStatus = async (req, res) => {
+  try {
+    return ok(res, 'Estado del local actualizado', await storeService.setReceptionStatus(req.store, req.body?.status));
+  } catch (error) {
+    return fail(res, error, 'Error al cambiar el estado del local');
+  }
+};
+
+export const setMyLogo = async (req, res) => {
+  try {
+    return ok(res, 'Logo guardado correctamente', await storeService.setLogo(req.store, req.body?.image));
+  } catch (error) {
+    return fail(res, error, 'Error al guardar el logo');
+  }
+};
+
+export const deleteMyLogo = async (req, res) => {
+  try {
+    return ok(res, 'Logo eliminado correctamente', await storeService.clearLogo(req.store));
+  } catch (error) {
+    return fail(res, error, 'Error al eliminar el logo');
+  }
+};

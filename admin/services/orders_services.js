@@ -85,6 +85,10 @@ export const createFromCart = async (dinerId, data = {}) => {
     throw serviceError(409, 'STORE_NOT_ACTIVE', 'El local no está recibiendo pedidos');
   }
 
+  if (cart.store.reception_status !== 'abierto') {
+    throw serviceError(409, 'STORE_NOT_RECEIVING', 'El local no está recibiendo pedidos en este momento');
+  }
+
   const unavailable = cart.items.filter((item) => !item.product.available);
 
   if (unavailable.length > 0) {

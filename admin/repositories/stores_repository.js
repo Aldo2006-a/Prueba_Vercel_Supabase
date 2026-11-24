@@ -23,7 +23,25 @@ const findByUserId = async (userId) => {
   return await Store.findOne({ where: { user_id: userId } });
 };
 
+/**
+ * Guarda (o quita, con null) el logo del local
+ */
+const setLogo = async (id, url) => {
+  await Store.update({ logo_url: url }, { where: { id } });
+  return await Store.findByPk(id);
+};
+
+/**
+ * Guarda el estado de recepción del local (abierto | suspendido | cerrado)
+ */
+const setReceptionStatus = async (id, status) => {
+  await Store.update({ reception_status: status }, { where: { id } });
+  return await Store.findByPk(id);
+};
+
 const storeRepository = {
+  setReceptionStatus,
+  setLogo,
   findAll,
   findById,
   findByUserId

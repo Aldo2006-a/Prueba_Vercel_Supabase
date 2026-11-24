@@ -1,5 +1,6 @@
 import productRepository from '../repositories/products_repository.js';
 import categoryRepository from '../repositories/categories_repository.js';
+import { saveImage, removeImage } from './images_services.js';
 import { serviceError } from './errors.js';
 
 /**
@@ -39,10 +40,6 @@ const buildProductData = async (storeId, data, partial) => {
       throw serviceError(400, 'INVALID_DESCRIPTION', 'La descripción admite máximo 160 caracteres');
     }
     clean.description = data.description;
-  }
-
-  if (data.picture_url !== undefined) {
-    clean.picture_url = data.picture_url;
   }
 
   if (data.available !== undefined) {
@@ -134,11 +131,56 @@ export const remove = async (storeId, id) => {
   }
 
   try {
-    return await productRepository.delete(product);
+    await productRepository.delete(product);
+    await removeImage(product.picture_url);
+    return true;
   } catch (error) {
     if (error.name === 'SequelizeForeignKeyConstraintError') {
       throw serviceError(409, 'PRODUCT_IN_USE', 'El producto tiene reseñas; márcalo como no disponible en lugar de eliminarlo');
     }
     throw error;
   }
+};
+
+/**
+ * Poner o cambiar la foto del producto (data URL). La foto anterior se borra del disco.
+ */
+export const setPicture = async (storeId, id, image) => {
+  const product = await productRepository.findByIdAndStore(id, storeId);
+
+  if (!product) {
+    throw serviceError(404, 'PRODUCT_NOT_FOUND', 'Producto no encontrado');
+  }
+
+  const url = await saveImage(image, 'products');
+  const previous = product.picture_url;
+
+  try {
+    await productRepository.update(product, { picture_url: url });
+  } catch (error) {
+    await removeImage(url);
+    throw error;
+  }
+
+  await removeImage(previous);
+
+  return await fetchById(storeId, id);
+};
+
+/**
+ * Quitar la foto del producto
+ */
+export const clearPicture = async (storeId, id) => {
+  const product = await productRepository.findByIdAndStore(id, storeId);
+
+  if (!product) {
+    throw serviceError(404, 'PRODUCT_NOT_FOUND', 'Producto no encontrado');
+  }
+
+  const previous = product.picture_url;
+
+  await productRepository.update(product, { picture_url: null });
+  await removeImage(previous);
+
+  return await fetchById(storeId, id);
 };

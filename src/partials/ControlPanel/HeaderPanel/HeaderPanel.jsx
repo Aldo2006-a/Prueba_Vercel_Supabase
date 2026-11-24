@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { obtenerMiLocal, obtenerMiPerfil } from '../../../api/locales'
+import { obtenerMiLocal, obtenerMiPerfil, cambiarEstadoLocal } from '../../../api/locales'
 import './HeaderPanel.css'
 import './HeaderPanel.menus.css'   // estilos de los menús desplegables
 
@@ -21,8 +21,15 @@ export default function HeaderPanel() {
   const inicialesUsuario = perfil ? perfil.initials : ''
 
   useEffect(() => {
-    obtenerMiLocal().then((local) => setSede(local.commercial_name)).catch(() => setSede(''))
+    obtenerMiLocal()
+      .then((local) => { setSede(local.commercial_name); setEstado(local.reception_status) })
+      .catch(() => setSede(''))
     obtenerMiPerfil().then(setPerfil).catch(() => setPerfil(null))
+
+    // Si el estado se cambia desde otra pantalla (Agotados), el encabezado se actualiza
+    const alCambiar = (e) => setEstado(e.detail)
+    window.addEventListener('estado-local', alCambiar)
+    return () => window.removeEventListener('estado-local', alCambiar)
   }, [])
 
   const navRef = useRef(null)
@@ -45,7 +52,16 @@ export default function HeaderPanel() {
 
   const alternar = (nombre) => setMenu((actual) => (actual === nombre ? null : nombre))
 
-  const elegirEstado = (id) => { setEstado(id); setMenu(null) }
+  const elegirEstado = async (id) => {
+    const anterior = estado
+    setEstado(id)
+    setMenu(null)
+    try {
+      await cambiarEstadoLocal(id)
+    } catch {
+      setEstado(anterior)   // si no se pudo guardar, vuelve al estado que tenía
+    }
+  }
 
   const estadoActual = ESTADOS.find((e) => e.id === estado)
 

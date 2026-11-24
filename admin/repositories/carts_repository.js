@@ -2,7 +2,7 @@ import sequelize from '../../configs/database.js';
 import { Cart, CartItem, CartItemOption, ProductOption, Product, Store } from '../models/associations.js';
 
 const cartInclude = [
-  { model: Store, as: 'store', attributes: ['id', 'commercial_name', 'campus_location', 'operative_status'] },
+  { model: Store, as: 'store', attributes: ['id', 'commercial_name', 'campus_location', 'operative_status', 'reception_status'] },
   {
     model: CartItem,
     as: 'items',

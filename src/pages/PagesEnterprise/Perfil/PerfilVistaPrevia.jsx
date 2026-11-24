@@ -1,22 +1,53 @@
 import "./PerfilVistaPrevia.css";
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { obtenerPerfilLocal } from '../../../api/perfil';
+import { obtenerMisResenas } from '../../../api/resenas';
+import { obtenerProductos } from '../../../api/carta';
 
-
-/* Datos de ejemplo (luego puedes reemplazarlos por datos de tu API) */
-const LOCAL = {
-  nombre: "Cafetería Central",
-  ubicacion: "Pabellón A, primer piso · Sede Monterrico · RUC 20512345678",
-  descripcion:
-    "Desayunos, menú del día y café pasado. Atendemos pedidos anticipados desde las 07:00 con recojo en el mostrador principal del pabellón A.",
-  correo: "cafeteriacentral@ulima.edu.pe",
-  telefono: "945 112 330",
-  preparacion: "12 minutos",
-  calificacion: "4.6 · 128 calificaciones",
-};
+// Fondo de un recuadro con foto real (o el placeholder rayado de la hoja de estilos si no hay)
+const conFoto = (url) => (url ? { background: `center / cover no-repeat url(${url})` } : undefined);
 
 export default function PerfilVistaPrevia() {
     const navigate = useNavigate();
+  const [local, setLocal] = useState(null);
+  const [calificacion, setCalificacion] = useState('Sin calificaciones todavía');
+  const [preparacion, setPreparacion] = useState('—');
+
+  useEffect(() => {
+    obtenerPerfilLocal().then(setLocal).catch(() => setLocal(null));
+
+    obtenerMisResenas()
+      .then(({ summary }) => {
+        if (summary.total > 0) {
+          setCalificacion(`${summary.average.toFixed(1)} · ${summary.total} ${summary.total === 1 ? 'calificación' : 'calificaciones'}`);
+        }
+      })
+      .catch(() => {});
+
+    // Preparación promedio = promedio del tiempo de preparación de los productos que lo tienen
+    obtenerProductos()
+      .then((productos) => {
+        const tiempos = productos.map((p) => p.preparation_time).filter((t) => t !== null && t !== undefined);
+        if (tiempos.length) setPreparacion(`${Math.round(tiempos.reduce((a, b) => a + b, 0) / tiempos.length)} minutos`);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!local) {
+    return <div className="pv-app p-4"><p className="text-secondary">Cargando perfil…</p></div>;
+  }
+
+  const LOCAL = {
+    nombre: local.commercial_name,
+    ubicacion: [local.campus_location, `Sede ${local.campus}`, local.ruc ? `RUC ${local.ruc}` : null].filter(Boolean).join(' · '),
+    descripcion: local.description || 'Aún no agregaste una descripción.',
+    correo: local.email,
+    telefono: local.phone || '—',
+    preparacion,
+    calificacion,
+  };
+
   return (
     <div className="pv-app p-4">
       {/* 1. RUTA DE NAVEGACIÓN (breadcrumb): "Local › Perfil del local" */}
@@ -42,15 +73,15 @@ export default function PerfilVistaPrevia() {
       {/* 3. TARJETA BLANCA DEL PERFIL */}
       <section className="card pv-card overflow-hidden">
         {/* 3.1 Foto de portada (placeholder con rayas) */}
-        <div className="pv-placeholder pv-portada">
-          <span>foto de portada del local</span>
+        <div className="pv-placeholder pv-portada" style={conFoto(local.photos[0]?.url)}>
+          {!local.photos[0] && <span>foto de portada del local</span>}
         </div>
 
         <div className="card-body p-3">
           {/* 3.2 Fila: logo cuadrado + información del local */}
           <div className="d-flex gap-3">
             {/* Logo / foto de perfil del local */}
-            <div className="pv-placeholder pv-logo-local flex-shrink-0" />
+            <div className="pv-placeholder pv-logo-local flex-shrink-0" style={conFoto(local.logo_url)} />
 
             <div>
               {/* Nombre + chips de estado */}
@@ -70,16 +101,15 @@ export default function PerfilVistaPrevia() {
             </div>
           </div>
 
-          {/* 3.3 Galería: 4 fotos en una fila (grilla de Bootstrap) */}
+          {/* 3.3 Galería: hasta 4 fotos en una fila (grilla de Bootstrap) */}
           <div className="row row-cols-4 g-2 my-3">
-            <div className="col"><div className="pv-placeholder pv-foto" /></div>
-            <div className="col"><div className="pv-placeholder pv-foto" /></div>
-            <div className="col"><div className="pv-placeholder pv-foto" /></div>
-            <div className="col">
-              <div className="pv-placeholder pv-foto">
-                <span>galería del local</span>
+            {[0, 1, 2, 3].map((i) => (
+              <div className="col" key={i}>
+                <div className="pv-placeholder pv-foto" style={conFoto(local.photos[i]?.url)}>
+                  {i === 3 && !local.photos[3] && <span>galería del local</span>}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
           {/* 3.4 Datos de contacto y métricas (4 columnas, con línea superior) */}

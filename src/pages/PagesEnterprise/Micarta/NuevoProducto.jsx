@@ -7,6 +7,9 @@ import {
   actualizarProducto,
   formularioAProducto,
   mensajeDeError,
+  archivoADataUrl,
+  subirFotoProducto,
+  quitarFotoProducto,
 } from "../../../api/carta";
 // Bootstrap 5 debe estar cargado una sola vez en tu app (ej. en main.jsx / index.js):
 //   import "bootstrap/dist/css/bootstrap.min.css";
@@ -39,7 +42,9 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
       disponibilidad: "Disponible",
     }
   );
-  const [foto, setFoto] = useState(null); // URL temporal de la foto elegida
+  const [foto, setFoto] = useState(productoEditar?.foto_url ?? null); // foto que se muestra: la guardada o la elegida
+  const [archivoFoto, setArchivoFoto] = useState(null); // archivo nuevo elegido (se sube al guardar)
+  const [quitarFoto, setQuitarFoto] = useState(false);
   const inputFotoRef = useRef(null);
 
   const [categorias, setCategorias] = useState([]);
@@ -61,7 +66,7 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
   }, []);
 
   // Libera la URL temporal cuando cambia la foto o se cierra la vista
-  useEffect(() => () => foto && URL.revokeObjectURL(foto), [foto]);
+  useEffect(() => () => foto && foto.startsWith('blob:') && URL.revokeObjectURL(foto), [foto]);
 
   const cambiar = (campo) => (e) =>
     setForm((prev) => ({ ...prev, [campo]: e.target.value }));
@@ -73,7 +78,18 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
 
   const elegirFoto = (e) => {
     const archivo = e.target.files?.[0];
-    if (archivo) setFoto(URL.createObjectURL(archivo));
+    e.target.value = '';
+    if (!archivo) return;
+
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(archivo.type) || archivo.size > 3 * 1024 * 1024) {
+      setError('La foto debe ser PNG, JPG o WEBP y pesar menos de 3 MB.');
+      return;
+    }
+
+    setError('');
+    setArchivoFoto(archivo);
+    setQuitarFoto(false);
+    setFoto(URL.createObjectURL(archivo));
   };
 
   const guardar = async (e) => {
@@ -89,10 +105,21 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
     setGuardando(true);
     setError("");
     try {
-      if (esEdicion) {
-        await actualizarProducto(productoEditar.id, datos);
-      } else {
-        await crearProducto(datos);
+      const guardado = esEdicion
+        ? await actualizarProducto(productoEditar.id, datos)
+        : await crearProducto(datos);
+
+      // La foto se sube después de guardar el producto (necesita su id)
+      try {
+        if (archivoFoto) {
+          await subirFotoProducto(guardado.id, await archivoADataUrl(archivoFoto));
+        } else if (quitarFoto && esEdicion) {
+          await quitarFotoProducto(guardado.id);
+        }
+      } catch (errFoto) {
+        setError(`El producto se guardó, pero la foto no: ${mensajeDeError(errFoto, errFoto.message)}`);
+        setGuardando(false);
+        return;
       }
       onGuardar?.({ ...form, precio: precioNumero, foto });
       navigate("/enterprises/Micarta"); // redirige a Mi carta
@@ -250,18 +277,27 @@ export default function NuevoProducto({ onCancelar, onGuardar }) {
                       className="btn btn-outline-danger btn-sm np-btn-foto"
                       onClick={() => inputFotoRef.current?.click()}
                     >
-                      Cambiar fotografía
+                      {foto ? 'Cambiar fotografía' : 'Subir fotografía'}
                     </button>
+                    {foto && (
+                      <button
+                        type="button"
+                        className="btn btn-link btn-sm text-danger"
+                        onClick={() => { setFoto(null); setArchivoFoto(null); setQuitarFoto(true); }}
+                      >
+                        Quitar
+                      </button>
+                    )}
                     {/* Input real de archivo (oculto): lo abre el botón de arriba */}
                     <input
                       ref={inputFotoRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/png,image/jpeg,image/webp"
                       className="d-none"
                       onChange={elegirFoto}
                     />
                     <div className="np-ayuda">
-                      Cuadrada, mínimo 800 × 800 px. La imagen manda en la tarjeta.
+                      PNG, JPG o WEBP de hasta 3 MB. Mejor cuadrada (1:1).
                     </div>
                   </div>
                 </div>

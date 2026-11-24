@@ -1,5 +1,6 @@
 import registrationRepository from '../repositories/registration_repository.js';
 import roleRepository from '../repositories/roles_repository.js';
+import { saveImage, removeImage } from './images_services.js';
 import { serviceError } from './errors.js';
 
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,7 +32,7 @@ const parsePassword = (value, confirmation) => {
 };
 
 // Acepta "987 654 321", "+51 987 654 321", "987-654-321"; se guarda sin espacios ni guiones
-const parsePhone = (value, required) => {
+export const parsePhone = (value, required) => {
   const raw = text(value);
 
   if (!raw) {
@@ -101,6 +102,7 @@ export const registerDiner = async (data = {}) => {
 
     return { id, email, role: 'comensal' };
   } catch (error) {
+    await removeImage(logoUrl);
     throw translateUniqueError(error);
   }
 };
@@ -147,6 +149,9 @@ export const registerStore = async (data = {}) => {
 
   const role = await roleRepository.findByName('enterprises');
 
+  // Logo opcional (data URL). Se guarda solo cuando el resto de datos ya es válido
+  const logoUrl = data.logo ? await saveImage(data.logo, 'stores') : null;
+
   try {
     await registrationRepository.createStore({
       user: { email, phone, password, status: 'pendiente', role_id: role.id },
@@ -155,6 +160,7 @@ export const registerStore = async (data = {}) => {
         campus_location: location,
         campus,
         ruc,
+        logo_url: logoUrl,
         operative_status: 'pendiente'
       }
     });

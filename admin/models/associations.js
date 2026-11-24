@@ -16,6 +16,7 @@ import CartItemOption from './cart_item_option.js';
 import OrderItemOption from './order_item_option.js';
 import OrderReview from './order_review.js';
 import ProductReview from './product_review.js';
+import StorePhoto from './store_photo.js';
 
 // roles 1 --- N users
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -32,6 +33,10 @@ Diner.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 // stores 1 --- N store_schedules (un horario por día de la semana)
 Store.hasMany(StoreSchedule, { foreignKey: 'store_id', as: 'schedules' });
 StoreSchedule.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
+
+// stores 1 --- N store_photos (galería del local)
+Store.hasMany(StorePhoto, { foreignKey: 'store_id', as: 'photos' });
+StorePhoto.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 
 // stores 1 --- N categories
 Store.hasMany(Category, { foreignKey: 'store_id', as: 'categories' });
@@ -97,4 +102,4 @@ Order.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
-export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule, OptionGroup, ProductOption, CartItemOption, OrderItemOption, OrderReview, ProductReview };
+export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule, OptionGroup, ProductOption, CartItemOption, OrderItemOption, OrderReview, ProductReview, StorePhoto };

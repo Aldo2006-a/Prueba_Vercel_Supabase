@@ -463,6 +463,7 @@ const Micarta = () => {
           precio: product.price,
           tiempo: tiempoAFormulario(real.preparation_time),
           disponibilidad: product.status,
+          foto_url: product.picture_url || null,
         },
       },
     });
@@ -670,7 +671,10 @@ const Micarta = () => {
                       className="card border-0 shadow-sm rounded-3 p-3 product-card"
                     >
                       <div className="d-flex align-items-center flex-wrap flex-md-nowrap gap-3">
-                        <div className="product-img-placeholder flex-shrink-0"></div>
+                        <div
+                          className="product-img-placeholder flex-shrink-0"
+                          style={product.picture_url ? { backgroundImage: `url(${product.picture_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                        ></div>
 
                         <div className="flex-grow-1" style={{ minWidth: 0 }}>
                           <h5 className="fw-bold mb-1 text-dark product-title">

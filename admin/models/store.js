@@ -23,6 +23,9 @@ const Store = sequelize.define('Store', {
         allowNull: false,
         defaultValue: 'Monterrico',
     },
+    description: {
+        type: DataTypes.STRING(240),
+    },
     logo_url: {
         type: DataTypes.STRING(150),
     },
@@ -30,6 +33,11 @@ const Store = sequelize.define('Store', {
         type: DataTypes.STRING(20),
         allowNull: false,
         defaultValue: 'pendiente',
+    },
+    reception_status: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'abierto',
     },
     user_id: {
         type: DataTypes.INTEGER,

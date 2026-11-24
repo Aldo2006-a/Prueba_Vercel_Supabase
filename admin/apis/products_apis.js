@@ -88,3 +88,27 @@ export const deleteMyProduct = async (req, res) => {
     return fail(res, error, 'Error al eliminar el producto');
   }
 };
+
+export const setMyProductPicture = async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return invalidId(res);
+
+    const product = await productService.setPicture(req.store.id, id, req.body?.image);
+
+    return ok(res, 'Foto guardada correctamente', product);
+  } catch (error) {
+    return fail(res, error, 'Error al guardar la foto');
+  }
+};
+
+export const deleteMyProductPicture = async (req, res) => {
+  try {
+    const id = parseId(req.params.id);
+    if (!id) return invalidId(res);
+
+    return ok(res, 'Foto eliminada correctamente', await productService.clearPicture(req.store.id, id));
+  } catch (error) {
+    return fail(res, error, 'Error al eliminar la foto');
+  }
+};
