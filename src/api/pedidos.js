@@ -36,6 +36,10 @@ export const obtenerMisPedidos = async () => datos(await api.get('/my-orders'));
 /* ---------- Pedidos del local ---------- */
 export const obtenerPedidosLocal = async () => datos(await api.get('/my-store/orders'));
 
+// Pedidos con recojo en una fecha 'YYYY-MM-DD' (Resumen del día): { date, orders }
+export const obtenerPedidosDelDia = async (fecha) =>
+  datos(await api.get('/my-store/orders/day', { params: { date: fecha } }));
+
 export const buscarPedidoPorCodigo = async (codigo) =>
   datos(await api.get(`/my-store/orders/by-code/${encodeURIComponent(codigo)}`));
 

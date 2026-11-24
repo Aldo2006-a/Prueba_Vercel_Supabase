@@ -44,9 +44,11 @@
             <button id="btn-send" class="btn btn-primary w-100 mt-3" style="min-height:2.625rem" type="submit">Enviar enlace</button>
           </form>
  
-          <p class="text-center mt-3 mb-0" style="font-size:.6875rem">
-            <a class="link-cp" href="/iniciar-sesion" style="font-size:inherit">Volver al inicio de sesión</a>
-          </p>
+          <div class="volver-login">
+            <a class="btn-volver-login" href="/login">
+              <span aria-hidden="true">←</span> Volver al inicio de sesión
+            </a>
+          </div>
         </div>
  
         <!-- ============ PASO 2: Revisa tu correo ============ -->
@@ -269,7 +271,7 @@
         await api.resetPassword(token, pass.value);
         formPass.classList.add('d-none');
         showNotice('Contraseña actualizada. Ya puedes iniciar sesión.');
-        // window.location.href = '/iniciar-sesion';
+        setTimeout(() => { window.location.href = '/login'; }, 2500);
       } catch (err) {
         showNotice(err.message);
         btnSave.disabled = false;

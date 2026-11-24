@@ -17,6 +17,7 @@ import Solicitudes from '../pages/PagesOwner/Solicitudes/Solicitudes';
 
 // 3. CSS base
 import './owner.css';
+import './owner-layout.css';
 
 // Secciones del menú que todavía no tienen página
 // (muestra la ruta recibida para detectar enlaces mal escritos en el menú)

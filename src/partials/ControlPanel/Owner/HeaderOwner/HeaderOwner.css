@@ -128,3 +128,15 @@
 .owner-navbar__menu-item:hover {
   background-color: #FCEAE7;
 }
+
+/* El input va dentro de un <form> para que Enter ejecute la búsqueda */
+.owner-navbar__search-form {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  margin: 0;
+}
+
+.owner-navbar__search-form .owner-navbar__search {
+  width: 100%;
+}

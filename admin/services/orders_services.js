@@ -5,6 +5,7 @@ import scheduleRepository from '../repositories/schedules_repository.js';
 import { nowInLima, addDays, toMinutes } from './lima_time.js';
 import { normalizeSchedule, isValidSlot } from './schedule_rules.js';
 import { serviceError } from './errors.js';
+import { assertDinerCanOrder } from './diners_services.js';
 
 // Estado actual -> estados a los que puede pasar el local
 const TRANSITIONS = {
@@ -62,6 +63,8 @@ const toView = (order) => {
  * Convierte el carrito del comensal en un pedido
  */
 export const createFromCart = async (dinerId, data = {}) => {
+  await assertDinerCanOrder(dinerId);
+
   const pickupTime = typeof data.pickup_time === 'string' ? data.pickup_time : '';
 
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
@@ -167,6 +170,21 @@ export const fetchByStore = async (storeId) => {
   const orders = await orderRepository.findAllByStore(storeId, todayInLima());
 
   return orders.map(toView);
+};
+
+/**
+ * Pedidos del local con recojo en una fecha (YYYY-MM-DD); sin fecha, los de hoy (hora de Lima)
+ */
+export const fetchDayByStore = async (storeId, rawDate) => {
+  const date = rawDate === undefined || rawDate === '' ? todayInLima() : String(rawDate);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) {
+    throw serviceError(400, 'INVALID_DATE', 'La fecha debe tener el formato AAAA-MM-DD');
+  }
+
+  const orders = await orderRepository.findAllByStoreAndDate(storeId, date);
+
+  return { date, orders: orders.map(toView) };
 };
 
 /**

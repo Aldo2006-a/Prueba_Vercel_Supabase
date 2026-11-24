@@ -3,61 +3,37 @@
 // Rutas: /owner/comensales  y  /owner/locales
 
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import '../OwnerUI.css'
+import {
+  obtenerComensales, obtenerLocalesOwner, cambiarEstadoComensal, cambiarEstadoLocalOwner,
+} from '../../../api/owner'
+import { mensajeDeError } from '../../../api/carta'
 import './Comensales.css'
-
-/* ---------- Datos de ejemplo ---------- */
-
-const CARRERAS = ['Ing. Industrial', 'Derecho', 'Administración', 'Comunicación', 'Psicología', 'Arquitectura']
 
 const quitarTildes = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
-function crearComensal(id, nombre, carrera, pedidos, noRecogidos, bloqueado = false) {
-  const [n, a] = nombre.split(' ')
-  return {
-    id,
-    nombre,
-    correo: `${quitarTildes(n)}.${quitarTildes(a)}@aloe.ulima.edu.pe`.toLowerCase(),
-    carrera,
-    pedidos,
-    noRecogidos,
-    estado: bloqueado ? 'Bloqueado' : 'Activo',
-    motivo: bloqueado ? 'Pedidos no recogidos reiterados' : '',
-  }
-}
+// Comensal de la API -> fila de la tabla
+const comensalAFila = (d) => ({
+  id: d.id,
+  nombre: d.name,
+  correo: d.email,
+  pedidos: d.orders,
+  entregados: d.delivered,
+  estado: d.status === 'bloqueado' ? 'Bloqueado' : 'Activo',
+  motivo: d.reason || '',
+})
 
-const COMENSALES_INICIALES = [
-  crearComensal(1,  'Mateo Rojas Ibáñez',       'Ing. Industrial', 24, 0),
-  crearComensal(2,  'Camila Ayala Ponce',       'Derecho',         31, 1),
-  crearComensal(3,  'Diego Salazar Trigoso',    'Ing. Industrial', 6,  4, true),
-  crearComensal(4,  'Andrea Núñez Lozano',      'Comunicación',    12, 0),
-  crearComensal(5,  'Renzo Vílchez Paredes',    'Administración',  18, 1),
-  crearComensal(6,  'Sofía Cárdenas Loayza',    'Psicología',      27, 0),
-  crearComensal(7,  'Joaquín Bravo Silva',      'Arquitectura',    9,  0),
-  crearComensal(8,  'Valeria Quispe Mendoza',   'Ing. Industrial', 22, 0),
-  crearComensal(9,  'Luis Huamán Torres',       'Derecho',         15, 2),
-  crearComensal(10, 'Fernanda Rivas Castro',    'Administración',  33, 0),
-  crearComensal(11, 'Sebastián Cueva Marín',    'Comunicación',    8,  3),
-  crearComensal(12, 'Lucía Paredes Vega',       'Psicología',      19, 0),
-  crearComensal(13, 'Gabriel Soto Medina',      'Ing. Industrial', 14, 1),
-  crearComensal(14, 'Daniela Flores Campos',    'Arquitectura',    25, 0),
-  crearComensal(15, 'Hugo Palacios Reyes',      'Derecho',         5,  5, true),
-  crearComensal(16, 'Isabella Córdova Luna',    'Comunicación',    29, 0),
-  crearComensal(17, 'Marco Delgado Pinto',      'Administración',  11, 0),
-  crearComensal(18, 'Natalia Esquivel Rojas',   'Ing. Industrial', 20, 1),
-  crearComensal(19, 'Adrián Fuentes Salas',     'Psicología',      7,  2),
-  crearComensal(20, 'Paula Guerra Zevallos',    'Derecho',         16, 0),
-  crearComensal(21, 'Rodrigo Mejía Aguirre',    'Arquitectura',    13, 0),
-]
-
-const LOCALES_INICIALES = [
-  { id: 1, nombre: 'Cafetería Central',          correo: 'central@campuspide.pe',     pedidos: 540, cancelados: 21, estado: 'Activo', motivo: '' },
-  { id: 2, nombre: 'Menú Universitario N',       correo: 'menu.n@campuspide.pe',      pedidos: 402, cancelados: 25, estado: 'Activo', motivo: '' },
-  { id: 3, nombre: 'Sanguchería del pabellón E', correo: 'sangucheria.e@campuspide.pe', pedidos: 310, cancelados: 18, estado: 'Activo', motivo: '' },
-  { id: 4, nombre: 'Café de Biblioteca',         correo: 'biblioteca@campuspide.pe',  pedidos: 215, cancelados: 9,  estado: 'Activo', motivo: '' },
-  { id: 5, nombre: 'Juguería La Fuente',         correo: 'lafuente@campuspide.pe',    pedidos: 117, cancelados: 9,  estado: 'Suspendido', motivo: 'Incumplimiento de horarios' },
-]
+// Local de la API -> fila de la tabla
+const localAFila = (l) => ({
+  id: l.id,
+  nombre: l.name,
+  correo: l.email,
+  pedidos: l.orders,
+  cancelados: l.cancelled,
+  estado: l.status === 'suspendido' ? 'Suspendido' : 'Activo',
+  motivo: l.reason || '',
+})
 
 const MOTIVOS_COMENSAL = [
   'Pedidos no recogidos reiterados',
@@ -137,13 +113,32 @@ export default function Comensales({ tab = 'comensales' }) {
   const navigate = useNavigate()
   const esComensales = tab === 'comensales'
 
-  const [comensales, setComensales] = useState(COMENSALES_INICIALES)
-  const [locales, setLocales] = useState(LOCALES_INICIALES)
+  const [comensales, setComensales] = useState([])
+  const [locales, setLocales] = useState([])
+  const [cargando, setCargando] = useState(true)
 
-  const [busqueda, setBusqueda] = useState('')
+  useEffect(() => {
+    Promise.all([obtenerComensales(), obtenerLocalesOwner()])
+      .then(([listaComensales, listaLocales]) => {
+        setComensales(listaComensales.map(comensalAFila))
+        setLocales(listaLocales.map(localAFila))
+      })
+      .catch((e) => setAviso(mensajeDeError(e, 'No se pudieron cargar las cuentas.')))
+      .finally(() => setCargando(false))
+  }, [])
+
+  // El buscador del encabezado envía el texto en ?q=...
+  const [params] = useSearchParams()
+  const textoUrl = params.get('q') || ''
+  const [busqueda, setBusqueda] = useState(textoUrl)
   const [estado, setEstado] = useState('todos')
-  const [carrera, setCarrera] = useState('todas')
   const [pagina, setPagina] = useState(1)
+
+  // Si se busca de nuevo desde el encabezado, actualiza el filtro y vuelve a la página 1
+  useEffect(() => {
+    setBusqueda(textoUrl)
+    setPagina(1)
+  }, [textoUrl])
 
   const [modal, setModal] = useState(null) // { item }
   const [aviso, setAviso] = useState('')
@@ -152,18 +147,17 @@ export default function Comensales({ tab = 'comensales' }) {
   const estadoNegativo = esComensales ? 'Bloqueado' : 'Suspendido'
   const palabraPlural = esComensales ? 'comensales' : 'locales'
 
-  const hayFiltros = busqueda.trim() !== '' || estado !== 'todos' || (esComensales && carrera !== 'todas')
+  const hayFiltros = busqueda.trim() !== '' || estado !== 'todos'
 
   const filtrados = useMemo(() => {
     const q = quitarTildes(busqueda.trim().toLowerCase())
     return items.filter((it) => {
       if (estado !== 'todos' && it.estado !== estado) return false
-      if (esComensales && carrera !== 'todas' && it.carrera !== carrera) return false
       if (!q) return true
       const texto = quitarTildes(`${it.nombre} ${it.correo}`.toLowerCase())
       return texto.includes(q)
     })
-  }, [items, busqueda, estado, carrera, esComensales])
+  }, [items, busqueda, estado])
 
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))
   const paginaActual = Math.min(pagina, totalPaginas)
@@ -181,7 +175,6 @@ export default function Comensales({ tab = 'comensales' }) {
   function limpiarTodo() {
     setBusqueda('')
     setEstado('todos')
-    setCarrera('todas')
     setPagina(1)
   }
 
@@ -191,23 +184,35 @@ export default function Comensales({ tab = 'comensales' }) {
 
   /* Acciones sobre la cuenta */
 
-  function aplicarBloqueo(item, motivo, detalle) {
-    const actualizar = (lista) =>
-      lista.map((x) =>
-        x.id === item.id ? { ...x, estado: estadoNegativo, motivo: detalle ? `${motivo} · ${detalle}` : motivo } : x
-      )
-    if (esComensales) setComensales(actualizar)
-    else setLocales(actualizar)
-    setModal(null)
-    setAviso(`${esComensales ? 'Cuenta de' : 'Local'} ${item.nombre} ${esComensales ? 'bloqueada' : 'suspendido'}.`)
+  const reemplazar = (fila) => (lista) => lista.map((x) => (x.id === fila.id ? fila : x))
+
+  async function aplicarBloqueo(item, motivo, detalle) {
+    const razon = detalle ? `${motivo} · ${detalle}` : motivo
+    try {
+      if (esComensales) {
+        setComensales(reemplazar(comensalAFila(await cambiarEstadoComensal(item.id, 'bloqueado', razon))))
+      } else {
+        setLocales(reemplazar(localAFila(await cambiarEstadoLocalOwner(item.id, 'suspendido', razon))))
+      }
+      setModal(null)
+      setAviso(`${esComensales ? 'Cuenta de' : 'Local'} ${item.nombre} ${esComensales ? 'bloqueada' : 'suspendido'}.`)
+    } catch (e) {
+      setModal(null)
+      setAviso(mensajeDeError(e, 'No se pudo aplicar el cambio.'))
+    }
   }
 
-  function reactivar(item) {
-    const actualizar = (lista) =>
-      lista.map((x) => (x.id === item.id ? { ...x, estado: 'Activo', motivo: '' } : x))
-    if (esComensales) setComensales(actualizar)
-    else setLocales(actualizar)
-    setAviso(`${esComensales ? 'Cuenta de' : 'Local'} ${item.nombre} reactivad${esComensales ? 'a' : 'o'}.`)
+  async function reactivar(item) {
+    try {
+      if (esComensales) {
+        setComensales(reemplazar(comensalAFila(await cambiarEstadoComensal(item.id, 'activo'))))
+      } else {
+        setLocales(reemplazar(localAFila(await cambiarEstadoLocalOwner(item.id, 'activo'))))
+      }
+      setAviso(`${esComensales ? 'Cuenta de' : 'Local'} ${item.nombre} reactivad${esComensales ? 'a' : 'o'}.`)
+    } catch (e) {
+      setAviso(mensajeDeError(e, 'No se pudo reactivar.'))
+    }
   }
 
   /* Contenido del modal según la pestaña */
@@ -217,11 +222,8 @@ export default function Comensales({ tab = 'comensales' }) {
       ? {
           titulo: `Bloquear a ${modal.item.nombre.split(' ').slice(0, 2).join(' ')}`,
           descripcion: 'No podrá crear nuevos pedidos hasta que se reactive su cuenta. Los pedidos en curso se mantienen.',
-          motivos: MOTIVOS_COMENSAL.map((t, i) => ({
-            texto: t,
-            etiqueta: i === 0 && modal.item.noRecogidos > 0 ? `${t} (${modal.item.noRecogidos})` : t,
-          })),
-          motivoInicial: modal.item.noRecogidos >= 3 ? MOTIVOS_COMENSAL[0] : '',
+          motivos: MOTIVOS_COMENSAL.map((t) => ({ texto: t })),
+          motivoInicial: '',
           etiquetaAccion: 'Bloquear cuenta',
         }
       : {
@@ -235,7 +237,6 @@ export default function Comensales({ tab = 'comensales' }) {
 
   /* Chips de filtros activos */
   const chips = []
-  if (esComensales && carrera !== 'todas') chips.push({ clave: 'carrera', texto: `Carrera: ${carrera}`, quitar: () => filtrar(setCarrera)('todas') })
   if (estado !== 'todos') chips.push({ clave: 'estado', texto: `Estado: ${estado}`, quitar: () => filtrar(setEstado)('todos') })
 
   return (
@@ -286,17 +287,6 @@ export default function Comensales({ tab = 'comensales' }) {
           </select>
         </label>
 
-        {esComensales && (
-          <label className="owner-select">
-            <select value={carrera} onChange={(e) => filtrar(setCarrera)(e.target.value)} aria-label="Carrera">
-              <option value="todas">Carrera: todas</option>
-              {CARRERAS.map((c) => (
-                <option key={c} value={c}>Carrera: {c}</option>
-              ))}
-            </select>
-          </label>
-        )}
-
         {chips.map((c) => (
           <span key={c.clave} className="cm-chip">
             {c.texto}
@@ -324,7 +314,7 @@ export default function Comensales({ tab = 'comensales' }) {
               <th>Nombre</th>
               <th>{esComensales ? 'Correo institucional' : 'Correo del local'}</th>
               <th className="num">Pedidos</th>
-              <th className="num">{esComensales ? 'No recogidos' : 'Cancelados'}</th>
+              <th className="num">{esComensales ? 'Entregados' : 'Rechazados'}</th>
               <th>Estado</th>
               <th>Acción</th>
             </tr>
@@ -332,13 +322,13 @@ export default function Comensales({ tab = 'comensales' }) {
           <tbody>
             {visibles.map((it) => {
               const negativo = it.estado === estadoNegativo
-              const indicador = esComensales ? it.noRecogidos : it.cancelados
+              const indicador = esComensales ? it.entregados : it.cancelados
               return (
                 <tr key={it.id} className={negativo ? 'is-negativo' : ''} title={negativo ? `Motivo: ${it.motivo}` : undefined}>
                   <td>{it.nombre}</td>
                   <td className="cm-correo">{it.correo}</td>
                   <td className="num">{it.pedidos}</td>
-                  <td className={`num ${esComensales && indicador >= 3 ? 'cm-alerta' : ''}`}>{indicador}</td>
+                  <td className="num">{indicador}</td>
                   <td>
                     <span className={`cm-estado ${negativo ? 'cm-estado--neg' : 'cm-estado--ok'}`}>{it.estado}</span>
                   </td>
@@ -357,7 +347,8 @@ export default function Comensales({ tab = 'comensales' }) {
           </tbody>
         </table>
 
-        {visibles.length === 0 && <p className="owner-vacio cm-vacio">No hay resultados con esos filtros.</p>}
+        {cargando && <p className="owner-vacio cm-vacio">Cargando…</p>}
+        {!cargando && visibles.length === 0 && <p className="owner-vacio cm-vacio">No hay resultados con esos filtros.</p>}
       </div>
 
       {/* Pie de tabla */}

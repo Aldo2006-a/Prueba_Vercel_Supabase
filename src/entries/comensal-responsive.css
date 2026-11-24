@@ -109,3 +109,52 @@ img, svg { max-width: 100%; }
   .comensal-navbar__cart-btn { padding: 0 12px; }
   .locales-title { font-size: 22px; }
 }
+
+
+/* ==========================================================================
+   LAYOUT UNIFICADO (escritorio): header, tabs, contenido y footer comparten
+   el mismo eje: contenido de hasta 1120px centrado, con 40px mínimo a los lados.
+   ========================================================================== */
+@media (min-width: 769px) {
+  .comensal-navbar {
+    max-width: none;
+    margin: 0;
+    padding-left: max(40px, calc((100% - 1120px) / 2));
+    padding-right: max(40px, calc((100% - 1120px) / 2));
+  }
+
+  .comensal-subheader-tabs {
+    padding-left: max(40px, calc((100% - 1120px) / 2));
+    padding-right: max(40px, calc((100% - 1120px) / 2));
+  }
+
+  .enterprise-footer {
+    padding-left: max(40px, calc((100% - 1120px) / 2));
+    padding-right: max(40px, calc((100% - 1120px) / 2));
+  }
+
+  /* Todas las vistas: mismo ancho, centradas y con el mismo respiro vertical */
+  .comensal-main-layout,
+  .carrito-layout,
+  .pedidos-layout,
+  .confirmacion-layout {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 40px 48px;
+    box-sizing: border-box;
+  }
+}
+
+/* Mismo título en todas las vistas */
+.locales-title,
+.calif-title {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 32px;
+  color: var(--text);
+}
+
+/* Las vistas rellenan el alto disponible (el footer queda abajo, sin huecos) */
+.app-body > main { flex: 1 0 auto; }

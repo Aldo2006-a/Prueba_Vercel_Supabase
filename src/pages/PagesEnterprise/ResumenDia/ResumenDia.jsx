@@ -1,59 +1,71 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './ResumenDia.css';
+import { obtenerPedidosDelDia, ahoraEnLima, fechaCorta } from '../../../api/pedidos';
+import { obtenerMiLocal } from '../../../api/locales';
+import { mensajeDeError } from '../../../api/carta';
 
-const FECHA_HOY = '2026-09-15';
 const POR_PAGINA = 7;
 
 const ESTADOS = {
-    entregado:   { label: 'Entregado',      clase: 'estado-entregado' },
+    recibido:    { label: 'Recibido',       clase: 'estado-preparacion' },
     preparacion: { label: 'En preparación', clase: 'estado-preparacion' },
     listo:       { label: 'Listo',          clase: 'estado-listo' },
+    entregado:   { label: 'Entregado',      clase: 'estado-entregado' },
     rechazado:   { label: 'Rechazado',      clase: 'estado-rechazado' },
-    norecogido:  { label: 'No recogido',    clase: 'estado-norecogido' },
 };
 
-// Datos de ejemplo (luego los reemplazas por tu API)
-const PEDIDOS = [
-    { id: 'PED-4805', cliente: 'Renzo Vílchez Paredes',  recojo: '10:30', total: 12.5, estado: 'entregado' },
-    { id: 'PED-4808', cliente: 'Paula Zegarra Ruiz',     recojo: '10:30', total: 4.5,  estado: 'entregado' },
-    { id: 'PED-4812', cliente: 'Sofía Cárdenas Loayza',  recojo: '11:00', total: 21.0, estado: 'entregado' },
-    { id: 'PED-4821', cliente: 'Mateo Rojas Ibáñez',     recojo: '11:30', total: 36.0, estado: 'preparacion' },
-    { id: 'PED-4835', cliente: 'Andrea Núñez Lozano',    recojo: '16:00', total: 7.5,  estado: 'listo' },
-    { id: 'PED-4845', cliente: 'Diego Salazar Trigoso',  recojo: '12:00', total: 18.0, estado: 'rechazado' },
-    { id: 'PED-4790', cliente: 'Lucía Farfán Delgado',   recojo: '10:30', total: 12.0, estado: 'norecogido' },
-    { id: 'PED-4850', cliente: 'Carlos Medina Quispe',   recojo: '12:30', total: 9.0,  estado: 'entregado' },
-    { id: 'PED-4852', cliente: 'Valeria Soto Prado',     recojo: '12:30', total: 15.5, estado: 'entregado' },
-    { id: 'PED-4855', cliente: 'Jorge Ramos Cueva',      recojo: '13:00', total: 22.0, estado: 'entregado' },
-    { id: 'PED-4858', cliente: 'Camila Torres Vega',     recojo: '13:00', total: 6.0,  estado: 'rechazado' },
-    { id: 'PED-4860', cliente: 'Luis Herrera Campos',    recojo: '13:15', total: 11.0, estado: 'entregado' },
-    { id: 'PED-4862', cliente: 'Ana Palacios Rivas',     recojo: '13:30', total: 14.5, estado: 'listo' },
-    { id: 'PED-4865', cliente: 'Pedro Gil Montalvo',     recojo: '14:00', total: 8.0,  estado: 'norecogido' },
-];
-
-const soles = (n) => `S/ ${n.toFixed(2)}`;
+const soles = (n) => `S/ ${Number(n).toFixed(2)}`;
 
 export default function ResumenDia() {
-    const [fecha, setFecha] = useState(FECHA_HOY);
+    const [fecha, setFecha] = useState(ahoraEnLima().fecha);
     const [filtro, setFiltro] = useState('todos');
     const [pagina, setPagina] = useState(1);
+    const [pedidos, setPedidos] = useState([]);
+    const [nombreLocal, setNombreLocal] = useState('');
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState('');
 
-    const resumen = useMemo(() => {
-        const atendidos  = PEDIDOS.filter((p) => ['entregado', 'listo', 'preparacion'].includes(p.estado));
-        const cancelados = PEDIDOS.filter((p) => ['rechazado', 'norecogido'].includes(p.estado));
-        const cobrados   = PEDIDOS.filter((p) => p.estado === 'entregado');
-        const total      = cobrados.reduce((s, p) => s + p.total, 0);
-        return {
-            atendidos: atendidos.length,
-            cancelados: cancelados.length,
-            recibidos: PEDIDOS.length,
-            total,
-            ticket: cobrados.length ? total / cobrados.length : 0,
-        };
+    useEffect(() => {
+        obtenerMiLocal().then((l) => setNombreLocal(l.commercial_name)).catch(() => {});
     }, []);
 
+    // Cada vez que cambia la fecha se vuelven a pedir los pedidos de esa jornada
+    useEffect(() => {
+        if (!fecha) return;
+        setCargando(true);
+        setError('');
+        obtenerPedidosDelDia(fecha)
+            .then((dia) => setPedidos(dia.orders))
+            .catch((e) => { setPedidos([]); setError(mensajeDeError(e, 'No se pudieron cargar los pedidos.')); })
+            .finally(() => setCargando(false));
+    }, [fecha]);
+
+    const resumen = useMemo(() => {
+        const entregados = pedidos.filter((p) => p.status === 'entregado');
+        const rechazados = pedidos.filter((p) => p.status === 'rechazado');
+        const total = entregados.reduce((s, p) => s + Number(p.total), 0);
+
+        // Franja más activa: la hora de recojo con más pedidos no rechazados
+        const porHora = {};
+        pedidos.filter((p) => p.status !== 'rechazado').forEach((p) => {
+            const hora = p.pickup_time.slice(0, 2);
+            porHora[hora] = (porHora[hora] || 0) + 1;
+        });
+        const mejor = Object.entries(porHora).sort((a, b) => b[1] - a[1])[0];
+
+        return {
+            atendidos: entregados.length,
+            cancelados: rechazados.length,
+            recibidos: pedidos.length,
+            total,
+            ticket: entregados.length ? total / entregados.length : 0,
+            franja: mejor ? `${mejor[0]}:00` : null,
+        };
+    }, [pedidos]);
+
     const filtrados = useMemo(
-        () => (filtro === 'todos' ? PEDIDOS : PEDIDOS.filter((p) => p.estado === filtro)),
-        [filtro]
+        () => (filtro === 'todos' ? pedidos : pedidos.filter((p) => p.status === filtro)),
+        [filtro, pedidos]
     );
 
     const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
@@ -64,7 +76,7 @@ export default function ResumenDia() {
     const irA = (n) => setPagina(Math.min(Math.max(1, n), totalPaginas));
     const cambiarFiltro = (e) => { setFiltro(e.target.value); setPagina(1); };
 
-    const fechaTexto = fecha.split('-').reverse().join('/');
+    const fechaTexto = fecha ? fechaCorta(fecha) : '';
 
     return (
         <main className="app-content">
@@ -74,12 +86,12 @@ export default function ResumenDia() {
                     <div>
                         <span className="text-muted-custom small">Atención &gt; Resumen del día</span>
                         <h1 className="resumen-title">Resumen del día</h1>
-                        <p className="text-muted-custom small">Cafetería Central • {fechaTexto}</p>
+                        <p className="text-muted-custom small">{nombreLocal} • {fechaTexto}</p>
                     </div>
                     <div className="resumen-filtros">
                         <label className="filtro">
                             <span>Fecha:</span>
-                            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+                            <input type="date" value={fecha} onChange={(e) => { setFecha(e.target.value); setPagina(1); }} />
                         </label>
                         <label className="filtro">
                             <span>Estado:</span>
@@ -95,24 +107,24 @@ export default function ResumenDia() {
 
                 <section className="resumen-stats">
                     <article className="stat-card">
-                        <span className="stat-label">PEDIDOS ATENDIDOS</span>
+                        <span className="stat-label">PEDIDOS ENTREGADOS</span>
                         <strong className="stat-value">{resumen.atendidos}</strong>
                         <span className="stat-note">de {resumen.recibidos} recibidos</span>
                     </article>
                     <article className="stat-card">
                         <span className="stat-label">CANCELADOS O RECHAZADOS</span>
                         <strong className="stat-value stat-red">{resumen.cancelados}</strong>
-                        <span className="stat-note">por agotado o por el comensal</span>
+                        <span className="stat-note">rechazados por el local</span>
                     </article>
                     <article className="stat-card">
                         <span className="stat-label">TOTAL VENDIDO</span>
                         <strong className="stat-value stat-green">{soles(resumen.total)}</strong>
-                        <span className="stat-note">cobrado en el mostrador</span>
+                        <span className="stat-note">de los pedidos entregados</span>
                     </article>
                     <article className="stat-card">
                         <span className="stat-label">TICKET PROMEDIO</span>
                         <strong className="stat-value">{soles(resumen.ticket)}</strong>
-                        <span className="stat-note">franja más activa: 13:00</span>
+                        <span className="stat-note">franja más activa: {resumen.franja || '—'}</span>
                     </article>
                 </section>
 
@@ -128,18 +140,24 @@ export default function ResumenDia() {
                             </tr>
                         </thead>
                         <tbody>
-                            {visibles.length === 0 && (
+                            {error && (
+                                <tr><td colSpan="5" className="tabla-vacia">{error}</td></tr>
+                            )}
+                            {!error && cargando && (
+                                <tr><td colSpan="5" className="tabla-vacia">Cargando…</td></tr>
+                            )}
+                            {!error && !cargando && visibles.length === 0 && (
                                 <tr><td colSpan="5" className="tabla-vacia">No hay pedidos con este filtro</td></tr>
                             )}
                             {visibles.map((p) => (
                                 <tr key={p.id}>
-                                    <td data-label="Código" className="cod">{p.id}</td>
-                                    <td data-label="Comensal">{p.cliente}</td>
-                                    <td data-label="Recojo" className="muted">{p.recojo}</td>
+                                    <td data-label="Código" className="cod">{p.code}</td>
+                                    <td data-label="Comensal">{p.diner.name}</td>
+                                    <td data-label="Recojo" className="muted">{p.pickup_time}</td>
                                     <td data-label="Total" className="num cod">{soles(p.total)}</td>
                                     <td data-label="Estado">
-                                        <span className={`pill ${ESTADOS[p.estado].clase}`}>
-                                            {ESTADOS[p.estado].label}
+                                        <span className={`pill ${ESTADOS[p.status].clase}`}>
+                                            {ESTADOS[p.status].label}
                                         </span>
                                     </td>
                                 </tr>

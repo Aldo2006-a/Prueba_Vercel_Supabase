@@ -24,6 +24,9 @@ const User = sequelize.define('User', {
         allowNull: false,
         defaultValue: 'activo',
     },
+    status_reason: {
+        type: DataTypes.STRING(300),
+    },
     role_id: {
         type: DataTypes.INTEGER,
         allowNull: false,

@@ -1,18 +1,10 @@
 // src/pages/PagesOwner/Tablero/Tablero.jsx
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { obtenerVentasDiarias } from '../../../api/owner'
+import { mensajeDeError } from '../../../api/carta'
 import '../OwnerUI.css'
 import './Tablero.css'
-
-/* ---------- Datos de ejemplo (60 días, 5 locales) ---------- */
-
-const LOCALES = [
-  { id: 'cafeteria',   nombre: 'Cafetería Central',          base: 34, ticket: 14.5 },
-  { id: 'menu',        nombre: 'Menú Universitario N',       base: 26, ticket: 13.2 },
-  { id: 'sangucheria', nombre: 'Sanguchería del pabellón E', base: 19, ticket: 11.8 },
-  { id: 'biblioteca',  nombre: 'Café de Biblioteca',         base: 13, ticket: 9.6 },
-  { id: 'jugueria',    nombre: 'Juguería La Fuente',         base: 9,  ticket: 8.4 },
-]
 
 const RANGOS = [
   { valor: 7,  texto: 'últimos 7 días' },
@@ -24,24 +16,35 @@ const RANGOS = [
 const FACTOR_DIA = [0.06, 0.85, 1.3, 0.9, 0.95, 1.3, 0.4]
 const NOMBRE_DIA = ['domingos', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados']
 
-const ruido = (i, j) => {
-  const x = Math.sin(i * 12.9898 + j * 78.233) * 43758.5453
-  return x - Math.floor(x)
-}
+const DIAS_TOTALES = 60 // hoy menos 59 días: alcanza para comparar el rango de 30 días con el anterior
 
-// Del 18/07/2026 al 15/09/2026
-const DIAS = Array.from({ length: 60 }, (_, i) => {
-  const fecha = new Date(Date.UTC(2026, 6, 18 + i))
-  const dow = fecha.getUTCDay()
-  const porLocal = {}
-  LOCALES.forEach((l, j) => {
-    const pedidos = Math.round(l.base * FACTOR_DIA[dow] * (0.88 + ruido(i, j) * 0.24))
-    const cancelados = Math.round(pedidos * (0.05 + ruido(j, i) * 0.06))
-    const total = Math.round(pedidos * l.ticket * (0.95 + ruido(i + 7, j) * 0.1) * 100) / 100
-    porLocal[l.id] = { pedidos, cancelados, total }
+// Respuesta de la API -> lista de 60 días con los datos de cada local (0 si no hubo pedidos)
+function armarDias(ventas) {
+  const locales = ventas.stores.map((s) => ({ id: String(s.id), nombre: s.name }))
+  const filas = {}
+  ventas.days.forEach((f) => {
+    filas[`${f.date}|${f.store_id}`] = f
   })
-  return { fecha, dow, porLocal }
-})
+
+  const inicio = new Date(`${ventas.from}T00:00:00Z`)
+  const dias = Array.from({ length: DIAS_TOTALES }, (_, i) => {
+    const fecha = new Date(inicio.getTime() + i * 86400000)
+    const clave = fecha.toISOString().slice(0, 10)
+    const porLocal = {}
+    locales.forEach((l) => {
+      const f = filas[`${clave}|${l.id}`]
+      porLocal[l.id] = {
+        pedidos: f ? f.orders : 0,
+        cancelados: f ? f.cancelled : 0,
+        entregados: f ? f.delivered : 0,
+        total: f ? f.total : 0,
+      }
+    })
+    return { fecha, dow: fecha.getUTCDay(), porLocal }
+  })
+
+  return { locales, dias }
+}
 
 /* ---------- Utilidades ---------- */
 
@@ -52,19 +55,20 @@ const soles = (n) =>
   `S/ ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const entero = (n) => n.toLocaleString('en-US')
 
-function sumar(dias, localId) {
-  const ids = localId === 'todos' ? LOCALES.map((l) => l.id) : [localId]
+function sumar(dias, localId, locales) {
+  const ids = localId === 'todos' ? locales.map((l) => l.id) : [localId]
   return dias.reduce(
     (acc, d) => {
       ids.forEach((id) => {
         const r = d.porLocal[id]
         acc.pedidos += r.pedidos
         acc.cancelados += r.cancelados
+        acc.entregados += r.entregados
         acc.total += r.total
       })
       return acc
     },
-    { pedidos: 0, cancelados: 0, total: 0 }
+    { pedidos: 0, cancelados: 0, entregados: 0, total: 0 }
   )
 }
 
@@ -82,7 +86,7 @@ function Variacion({ actual, previo }) {
 
 /* ---------- Página ---------- */
 
-export default function Tablero() {
+function TableroDatos({ LOCALES, DIAS }) {
   const [rango, setRango] = useState(15)
   const [local, setLocal] = useState('todos')
 
@@ -90,22 +94,22 @@ export default function Tablero() {
     const diasAct = DIAS.slice(DIAS.length - rango)
     const diasPrev = DIAS.slice(DIAS.length - 2 * rango, DIAS.length - rango)
 
-    const act = sumar(diasAct, local)
-    const prev = sumar(diasPrev, local)
+    const act = sumar(diasAct, local, LOCALES)
+    const prev = sumar(diasPrev, local, LOCALES)
 
     const tasa = act.pedidos ? (act.cancelados / act.pedidos) * 100 : 0
     const tasaPrev = prev.pedidos ? (prev.cancelados / prev.pedidos) * 100 : 0
-    const ticket = act.pedidos ? act.total / act.pedidos : 0
-    const ticketPrev = prev.pedidos ? prev.total / prev.pedidos : 0
+    const ticket = act.entregados ? act.total / act.entregados : 0
+    const ticketPrev = prev.entregados ? prev.total / prev.entregados : 0
 
     const serie = diasAct.map((d) => ({
       fecha: d.fecha,
       dow: d.dow,
-      pedidos: sumar([d], local).pedidos,
+      pedidos: sumar([d], local, LOCALES).pedidos,
     }))
 
     const porLocal = LOCALES.filter((l) => local === 'todos' || l.id === local)
-      .map((l) => ({ ...l, vendido: sumar(diasAct, l.id).total }))
+      .map((l) => ({ ...l, vendido: sumar(diasAct, l.id, LOCALES).total }))
       .sort((a, b) => b.vendido - a.vendido)
 
     // Promedio por día de la semana, para la nota del gráfico
@@ -128,7 +132,7 @@ export default function Tablero() {
     }
 
     return { diasAct, act, prev, tasa, tasaPrev, ticket, ticketPrev, serie, porLocal, nota }
-  }, [rango, local])
+  }, [rango, local, LOCALES, DIAS])
 
   const { diasAct, act, prev, tasa, tasaPrev, ticket, ticketPrev, serie, porLocal, nota } = datos
 
@@ -143,7 +147,7 @@ export default function Tablero() {
   function exportar() {
     const filas = ['fecha,pedidos,cancelados,total_vendido']
     diasAct.forEach((d) => {
-      const r = sumar([d], local)
+      const r = sumar([d], local, LOCALES)
       filas.push(`${d.fecha.toISOString().slice(0, 10)},${r.pedidos},${r.cancelados},${r.total.toFixed(2)}`)
     })
     const blob = new Blob(['﻿' + filas.join('\n')], { type: 'text/csv;charset=utf-8' })
@@ -272,4 +276,22 @@ export default function Tablero() {
       </div>
     </section>
   )
+}
+
+/* ---------- Carga de datos ---------- */
+
+export default function Tablero() {
+  const [datos, setDatos] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    obtenerVentasDiarias(DIAS_TOTALES)
+      .then((ventas) => setDatos(armarDias(ventas)))
+      .catch((e) => setError(mensajeDeError(e, 'No se pudo cargar el tablero.')))
+  }, [])
+
+  if (error) return <section className="owner-page"><p className="owner-page__sub">{error}</p></section>
+  if (!datos) return <section className="owner-page"><p className="owner-page__sub">Cargando tablero…</p></section>
+
+  return <TableroDatos LOCALES={datos.locales} DIAS={datos.dias} />
 }

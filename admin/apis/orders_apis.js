@@ -33,6 +33,14 @@ export const listStoreOrders = async (req, res) => {
   }
 };
 
+export const getStoreOrdersOfDay = async (req, res) => {
+  try {
+    return ok(res, 'Pedidos del día listados correctamente', await orderService.fetchDayByStore(req.store.id, req.query.date));
+  } catch (error) {
+    return fail(res, error, 'Error al listar los pedidos del día');
+  }
+};
+
 export const getStoreOrderByCode = async (req, res) => {
   try {
     const order = await orderService.fetchByCode(req.store.id, req.params.code);

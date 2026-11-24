@@ -45,6 +45,17 @@ const findAllByStore = async (storeId, today) => {
   });
 };
 
+/**
+ * Todos los pedidos del local con recojo en una fecha (para el resumen del día)
+ */
+const findAllByStoreAndDate = async (storeId, date) => {
+  return await Order.findAll({
+    where: { store_id: storeId, pickup_date: date },
+    include: orderInclude,
+    order: [['pickup_time', 'ASC'], ['id', 'ASC'], itemsOrder]
+  });
+};
+
 const findByIdAndStore = async (id, storeId) => {
   return await Order.findOne({
     where: { id, store_id: storeId },
@@ -106,6 +117,7 @@ const orderRepository = {
   findStatusByName,
   findAllByDiner,
   findAllByStore,
+  findAllByStoreAndDate,
   findByIdAndStore,
   findByCodeAndStore,
   findByIdAndDiner,

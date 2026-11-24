@@ -7,6 +7,8 @@ import * as enterprises from '../controllers/enterprise_controllers.js';
 import * as comensales from '../controllers/comensal_controllers.js';
 import * as roleApis from '../apis/roles_apis.js';
 import * as userApis from '../apis/users_apis.js';
+import * as ownerAccountsApis from '../apis/owner_accounts_apis.js';
+import * as ownerStatsApis from '../apis/owner_stats_apis.js';
 import * as storeApis from '../apis/stores_apis.js';
 import * as categoryApis from '../apis/categories_apis.js';
 import * as productApis from '../apis/products_apis.js';
@@ -69,6 +71,17 @@ router.get('/api/v1/roles', requireRole('owner'), roleApis.listRoles);
 router.get('/api/v1/roles/:id', requireRole('owner'), roleApis.getRoleById);
 router.get('/api/v1/users', requireRole('owner'), userApis.listUsers);
 router.get('/api/v1/users/:id', requireRole('owner'), userApis.getUserById);
+
+// api cuentas del owner: comensales y locales (bloquear / suspender / reactivar)
+router.get('/api/v1/owner/diners', requireRole('owner'), ownerAccountsApis.listDiners);
+router.patch('/api/v1/owner/diners/:id/status', requireRole('owner'), ownerAccountsApis.changeDinerStatus);
+router.get('/api/v1/owner/stores', requireRole('owner'), ownerAccountsApis.listStores);
+router.patch('/api/v1/owner/stores/:id/status', requireRole('owner'), ownerAccountsApis.changeStoreStatus);
+
+// api métricas del owner
+router.get('/api/v1/owner/product-sales', requireRole('owner'), ownerStatsApis.getProductSales);
+router.get('/api/v1/owner/ranking', requireRole('owner'), ownerStatsApis.getRanking);
+router.get('/api/v1/owner/sales-daily', requireRole('owner'), ownerStatsApis.getDailySales);
 
 // api registro (público): crear cuenta de comensal y solicitar el registro de un local
 router.post('/api/v1/register/comensal', registrationApis.registerDiner);
@@ -141,6 +154,7 @@ router.put('/api/v1/my-store/schedule', requireRole('enterprises'), storeApis.lo
 
 // api mi local: pedidos (solo enterprises, sobre SU local)
 router.get('/api/v1/my-store/orders', requireRole('enterprises'), storeApis.loadMyStore, orderApis.listStoreOrders);
+router.get('/api/v1/my-store/orders/day', requireRole('enterprises'), storeApis.loadMyStore, orderApis.getStoreOrdersOfDay);
 router.get('/api/v1/my-store/orders/by-code/:code', requireRole('enterprises'), storeApis.loadMyStore, orderApis.getStoreOrderByCode);
 router.patch('/api/v1/my-store/orders/:id/status', requireRole('enterprises'), storeApis.loadMyStore, orderApis.changeStoreOrderStatus);
 

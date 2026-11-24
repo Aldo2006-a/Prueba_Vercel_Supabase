@@ -4,6 +4,7 @@ import optionGroupRepository from '../repositories/option_groups_repository.js';
 import orderRepository from '../repositories/orders_repository.js';
 import storeRepository from '../repositories/stores_repository.js';
 import { serviceError } from './errors.js';
+import { assertDinerCanOrder } from './diners_services.js';
 
 const MAX_QUANTITY = 20;
 
@@ -135,6 +136,8 @@ export const fetchCart = async (dinerId) => {
  * El carrito es de un solo local: si ya tiene productos de otro local responde 409.
  */
 export const addItem = async (dinerId, data = {}) => {
+  await assertDinerCanOrder(dinerId);
+
   const productId = Number(data.product_id);
 
   if (!Number.isInteger(productId) || productId < 1) {

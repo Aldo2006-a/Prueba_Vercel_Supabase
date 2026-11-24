@@ -26,6 +26,7 @@ entity "users" as users {
   phone : VARCHAR(15)
   password : VARCHAR(100)
   status : VARCHAR(20)
+  status_reason : VARCHAR(300)
   role_id : INT <<FK>>
 }
 
@@ -45,8 +46,13 @@ entity "stores" as stores {
   --
   commercial_name : VARCHAR(60)
   campus_location : VARCHAR(100)
+  ruc : VARCHAR(11)
+  campus : VARCHAR(30)
+  description : VARCHAR(240)
   logo_url : VARCHAR(150)
   operative_status : VARCHAR(20)
+  reception_status : VARCHAR(20)
+  status_reason : VARCHAR(300)
   user_id : INT <<FK>>
 }
 
@@ -182,6 +188,8 @@ entity "order_reviews" as order_reviews {
   --
   store_rating : INT
   comment : TEXT
+  store_reply : VARCHAR(500)
+  created_at : DATETIME
   order_id : INT <<FK>>
   diner_id : INT <<FK>>
   store_id : INT <<FK>>

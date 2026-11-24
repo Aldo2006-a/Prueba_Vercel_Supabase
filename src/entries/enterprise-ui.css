@@ -154,3 +154,32 @@ textarea:focus-visible {
         padding: 16px 14px 24px;
     }
 }
+
+
+/* ==========================================================================
+   LAYOUT UNIFICADO: todas las páginas de enterprise comparten el mismo marco
+   (mismo fondo, mismo relleno y scroll dentro del área de contenido).
+   ========================================================================== */
+.reviews-main {
+    padding: 22px 28px 32px;
+    background: #FFFBF8;
+}
+
+.micarta-container {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 22px 28px 32px !important;
+    background-color: #FFFBF8;
+}
+
+@media (max-width: 768px) {
+    .reviews-main,
+    .micarta-container {
+        padding: 16px 14px 24px !important;
+    }
+}

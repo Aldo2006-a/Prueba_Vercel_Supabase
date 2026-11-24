@@ -1,9 +1,10 @@
 // src/partials/ControlPanel/Owner/HeaderOwner/HeaderOwner.jsx
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import './HeaderOwner.css'
 
 export default function HeaderOwner() {
+  const navigate = useNavigate()
   const [busqueda, setBusqueda] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
 
@@ -28,6 +29,13 @@ export default function HeaderOwner() {
     }
   }, [])
 
+  // Enter o clic en la lupa: lleva a Comensales con el texto ya buscado
+  const buscar = (e) => {
+    e.preventDefault()
+    const q = busqueda.trim()
+    navigate(q ? `/owner/comensales?q=${encodeURIComponent(q)}` : '/owner/comensales')
+  }
+
   return (
     <nav className="owner-navbar">
 
@@ -35,13 +43,16 @@ export default function HeaderOwner() {
         Campus Pide <span className="owner-navbar__panel">· administración</span>
       </Link>
 
-      <input
-        type="search"
-        className="owner-navbar__search"
-        placeholder="Buscar comensal, local o código de pedido..."
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-      />
+      <form className="owner-navbar__search-form" role="search" onSubmit={buscar}>
+        <input
+          type="search"
+          className="owner-navbar__search"
+          placeholder="Buscar comensal o local… (Enter)"
+          aria-label="Buscar comensal o local"
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+      </form>
 
       <div className="owner-navbar__dropdown" ref={menuRef}>
         <button

@@ -39,6 +39,9 @@ const Store = sequelize.define('Store', {
         allowNull: false,
         defaultValue: 'abierto',
     },
+    status_reason: {
+        type: DataTypes.STRING(300),
+    },
     user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,

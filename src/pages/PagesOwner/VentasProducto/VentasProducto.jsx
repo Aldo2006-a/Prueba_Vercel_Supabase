@@ -1,51 +1,19 @@
 // src/pages/PagesOwner/VentasProducto/VentasProducto.jsx
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import '../OwnerUI.css'
 import './VentasProducto.css'
+import { obtenerVentasPorProducto } from '../../../api/owner'
+import { mensajeDeError } from '../../../api/carta'
 
-const LOCALES = [
-  { id: 'cafeteria',   nombre: 'Cafetería Central' },
-  { id: 'menu',        nombre: 'Menú Universitario N' },
-  { id: 'sangucheria', nombre: 'Sanguchería del pabellón E' },
-  { id: 'biblioteca',  nombre: 'Café de Biblioteca' },
-  { id: 'jugueria',    nombre: 'Juguería La Fuente' },
-]
+const DIAS = 30
 
-const CATEGORIAS = ['Desayunos', 'Almuerzos', 'Sándwiches', 'Bebidas', 'Postres']
-
+// Franjas de dos horas; las ventas de otras horas se suman a la primera o a la última
 const FRANJAS = ['07:00', '09:00', '11:00', '13:00', '15:00', '17:00']
 
-// Cómo se reparte cada categoría a lo largo de las franjas
-const PERFIL = {
-  Desayunos:  [0.45, 0.35, 0.10, 0.03, 0.04, 0.03],
-  Almuerzos:  [0.00, 0.05, 0.25, 0.60, 0.08, 0.02],
-  Sándwiches: [0.05, 0.15, 0.20, 0.30, 0.18, 0.12],
-  Bebidas:    [0.12, 0.14, 0.20, 0.24, 0.16, 0.14],
-  Postres:    [0.00, 0.10, 0.20, 0.30, 0.25, 0.15],
-}
+const indiceFranja = (hora) => Math.min(FRANJAS.length - 1, Math.max(0, Math.floor((hora - 7) / 2)))
 
-// u = unidades vendidas en el periodo
-const PRODUCTOS = [
-  { n: 'Menú ejecutivo',                  cat: 'Almuerzos',  local: 'menu',        precio: 14.0, u: 312 },
-  { n: 'Lomo saltado',                    cat: 'Almuerzos',  local: 'cafeteria',   precio: 18.0, u: 96 },
-  { n: 'Ají de gallina',                  cat: 'Almuerzos',  local: 'menu',        precio: 15.0, u: 74 },
-  { n: 'Ensalada César',                  cat: 'Almuerzos',  local: 'cafeteria',   precio: 12.0, u: 0 },
-  { n: 'Sándwich de pollo deshilachado',  cat: 'Sándwiches', local: 'sangucheria', precio: 9.5,  u: 248 },
-  { n: 'Triple de palta',                 cat: 'Sándwiches', local: 'sangucheria', precio: 8.0,  u: 121 },
-  { n: 'Empanada de carne',               cat: 'Sándwiches', local: 'cafeteria',   precio: 5.0,  u: 164 },
-  { n: 'Café pasado',                     cat: 'Bebidas',    local: 'biblioteca',  precio: 3.5,  u: 402 },
-  { n: 'Jugo surtido',                    cat: 'Bebidas',    local: 'jugueria',    precio: 6.5,  u: 186 },
-  { n: 'Chicha morada',                   cat: 'Bebidas',    local: 'cafeteria',   precio: 4.5,  u: 142 },
-  { n: 'Limonada frozen',                 cat: 'Bebidas',    local: 'jugueria',    precio: 7.0,  u: 88 },
-  { n: 'Infusión de manzanilla',          cat: 'Bebidas',    local: 'biblioteca',  precio: 3.0,  u: 0 },
-  { n: 'Alfajor de maicena',              cat: 'Postres',    local: 'biblioteca',  precio: 3.5,  u: 2 },
-  { n: 'Keke de zanahoria',               cat: 'Postres',    local: 'biblioteca',  precio: 4.0,  u: 67 },
-  { n: 'Gelatina',                        cat: 'Postres',    local: 'menu',        precio: 2.5,  u: 45 },
-  { n: 'Pan con huevo',                   cat: 'Desayunos',  local: 'cafeteria',   precio: 6.0,  u: 133 },
-  { n: 'Pan con chicharrón',              cat: 'Desayunos',  local: 'cafeteria',   precio: 9.0,  u: 58 },
-  { n: 'Tostadas con mermelada',          cat: 'Desayunos',  local: 'biblioteca',  precio: 5.0,  u: 0 },
-]
+const fechaCorta = (f) => f.split('-').reverse().join('/')
 
 const soles = (n) =>
   `S/ ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -55,15 +23,46 @@ const dos = (n) => String(n).padStart(2, '0')
 export default function VentasProducto() {
   const [local, setLocal] = useState('todos')
   const [categoria, setCategoria] = useState('todas')
+  const [api, setApi] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    obtenerVentasPorProducto(DIAS)
+      .then(setApi)
+      .catch((e) => setError(mensajeDeError(e, 'No se pudieron cargar las ventas.')))
+  }, [])
+
+  const LOCALES = useMemo(() => (api ? api.stores.map((l) => ({ id: String(l.id), nombre: l.name })) : []), [api])
+  const CATEGORIAS = useMemo(
+    () => (api ? [...new Set(api.products.map((p) => p.category || 'Sin categoría'))].sort() : []),
+    [api]
+  )
 
   const datos = useMemo(() => {
-    const filtrados = PRODUCTOS.filter(
-      (p) => (local === 'todos' || p.local === local) && (categoria === 'todas' || p.cat === categoria)
-    )
+    const vacio = { franjas: FRANJAS.map(() => 0), totalPedidos: 0, maxFranja: 0, idxPico: -1, masVendidos: [], sinMovimiento: [] }
+    if (!api) return vacio
 
-    const franjas = FRANJAS.map((_, i) =>
-      filtrados.reduce((s, p) => s + Math.round(p.u * PERFIL[p.cat][i]), 0)
-    )
+    // Unidades por producto y por franja
+    const porProducto = {}
+    api.sales.forEach((v) => {
+      const f = (porProducto[v.product_id] ||= { u: 0, monto: 0, franjas: FRANJAS.map(() => 0) })
+      f.u += v.units
+      f.monto += v.amount
+      f.franjas[indiceFranja(v.hour)] += v.units
+    })
+
+    const filtrados = api.products
+      .map((p) => ({
+        n: p.name,
+        cat: p.category || 'Sin categoría',
+        local: String(p.store_id),
+        u: porProducto[p.id]?.u ?? 0,
+        monto: porProducto[p.id]?.monto ?? 0,
+        franjas: porProducto[p.id]?.franjas ?? FRANJAS.map(() => 0),
+      }))
+      .filter((p) => (local === 'todos' || p.local === local) && (categoria === 'todas' || p.cat === categoria))
+
+    const franjas = FRANJAS.map((_, i) => filtrados.reduce((s, p) => s + p.franjas[i], 0))
     const totalPedidos = franjas.reduce((a, b) => a + b, 0)
     const maxFranja = Math.max(...franjas, 0)
     const idxPico = maxFranja ? franjas.indexOf(maxFranja) : -1
@@ -78,7 +77,7 @@ export default function VentasProducto() {
       .sort((a, b) => a.u - b.u)
 
     return { franjas, totalPedidos, maxFranja, idxPico, masVendidos, sinMovimiento }
-  }, [local, categoria])
+  }, [api, local, categoria])
 
   const { franjas, totalPedidos, maxFranja, idxPico, masVendidos, sinMovimiento } = datos
 
@@ -97,7 +96,7 @@ export default function VentasProducto() {
         <div>
           <h1 className="owner-page__title">Ventas por producto y franja</h1>
           <p className="owner-page__sub">
-            01/09/2026 al 15/09/2026 · {entero(totalPedidos)} pedidos
+            {api ? `${fechaCorta(api.from)} al ${fechaCorta(api.to)}` : 'Cargando…'} · {entero(totalPedidos)} unidades vendidas
           </p>
         </div>
 
@@ -121,6 +120,8 @@ export default function VentasProducto() {
           </label>
         </div>
       </div>
+
+      {error && <p className="owner-vacio">{error}</p>}
 
       <div className="vp-grid">
         {/* Franjas horarias */}
@@ -162,10 +163,10 @@ export default function VentasProducto() {
               </thead>
               <tbody>
                 {masVendidos.map((p) => (
-                  <tr key={p.n}>
+                  <tr key={`${p.local}-${p.n}`}>
                     <td>{p.n}</td>
                     <td className="num">{p.u}</td>
-                    <td className="num"><strong>{soles(p.u * p.precio)}</strong></td>
+                    <td className="num"><strong>{soles(p.monto)}</strong></td>
                   </tr>
                 ))}
               </tbody>
@@ -183,7 +184,7 @@ export default function VentasProducto() {
             <>
               <ul className="vp-sin">
                 {sinMovimiento.map((p) => (
-                  <li key={p.n}>
+                  <li key={`${p.local}-${p.n}`}>
                     <span>{p.n}</span>
                     <span>{p.u}</span>
                   </li>
