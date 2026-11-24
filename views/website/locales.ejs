@@ -63,88 +63,19 @@
             <div class="filter-pills" id="filterPills">
                 <button class="filter-btn active" data-filter="todos">Todos los locales</button>
                 <button class="filter-btn" data-filter="abierto">Abiertos ahora</button>
-                <button class="filter-btn" data-filter="cafeteria">Cafeterías y Menú</button>
-                <button class="filter-btn" data-filter="sangucheria">Sangucherías y Jugos</button>
             </div>
 
             <div class="locales-count">
-                Mostrando <strong id="contadorLocales">5</strong> locales disponibles
+                Mostrando <strong id="contadorLocales"><%= locales.length %></strong> locales disponibles
             </div>
         </div>
 
-        <!-- DATOS POR DEFECTO SI AÚN NO VIENEN DEL BACKEND -->
-        <%
-            const listaLocales = (typeof locales !== 'undefined' && locales.length > 0) ? locales : [
-                {
-                    id: 1,
-                    nombre: 'Cafetería Central',
-                    imagen: '/assets/img/cafeteriaCentral.png',
-                    abierto: true,
-                    ubicacion: 'Pabellón A',
-                    horario: '07:00 a 19:00',
-                    tiempo: '12 min',
-                    categoria: 'cafeteria',
-                    especialidad: 'Desayunos, almuerzos ejecutivos y café pasado',
-                    productosCount: 6
-                },
-                {
-                    id: 2,
-                    nombre: 'Sanguchería Pabellón E',
-                    imagen: '/assets/img/sangucheria.png',
-                    abierto: true,
-                    ubicacion: 'Pabellón E',
-                    horario: '08:00 a 18:00',
-                    tiempo: '10 min',
-                    categoria: 'sangucheria',
-                    especialidad: 'Sánguches artesanales, triples, empanadas y bebidas',
-                    productosCount: 5
-                },
-                {
-                    id: 3,
-                    nombre: 'Café de Biblioteca',
-                    imagen: '/assets/img/cafeBiblioteca.png',
-                    abierto: true,
-                    ubicacion: 'Biblioteca, piso 1',
-                    horario: '08:00 a 20:00',
-                    tiempo: '6 min',
-                    categoria: 'cafeteria',
-                    especialidad: 'Espresso, postres, croissants y snacks rápidos',
-                    productosCount: 4
-                },
-                {
-                    id: 4,
-                    nombre: 'Juguería La Fuente',
-                    imagen: '/assets/img/jugueria.png',
-                    abierto: false,
-                    ubicacion: 'Patio central',
-                    horario: 'abre 09:00',
-                    tiempo: '8 min',
-                    categoria: 'sangucheria',
-                    especialidad: 'Jugos naturales, batidos proteicos y ensaladas de frutas',
-                    productosCount: 3
-                },
-                {
-                    id: 5,
-                    nombre: 'Kiosco Pabellón C',
-                    imagen: '/assets/img/cafeteria-web.jpg',
-                    abierto: true,
-                    ubicacion: 'Pabellón C, piso 1',
-                    horario: '07:30 a 17:30',
-                    tiempo: '5 min',
-                    categoria: 'sangucheria',
-                    especialidad: 'Wraps, choclos con queso, bebidas frías y snacks',
-                    productosCount: 4
-                }
-            ];
-        %>
-
         <!-- GRILLA DE LOCALES -->
         <div class="row g-4" id="gridLocales">
-            <% listaLocales.forEach(local => { %>
+            <% locales.forEach(local => { %>
                 <div class="col-12 col-sm-6 col-lg-4 local-item" 
-                     data-nombre="<%= local.nombre.toLowerCase() %> <%= local.ubicacion.toLowerCase() %> <%= local.especialidad.toLowerCase() %>"
-                     data-estado="<%= local.abierto ? 'abierto' : 'cerrado' %>"
-                     data-categoria="<%= local.categoria %>">
+                     data-nombre="<%= (local.nombre + ' ' + local.ubicacion + ' ' + local.descripcion).toLowerCase() %>"
+                     data-estado="<%= local.abierto ? 'abierto' : 'cerrado' %>">
                     
                     <a href="/locales/<%= local.id %>" class="local-card-link">
                         <div class="local-card h-100">
@@ -155,7 +86,6 @@
                                     alt="<%= local.nombre %>"
                                     class="img-fluid"
                                 >
-                                <span class="time-pill">⏱ <%= local.tiempo %></span>
                             </div>
 
                             <div class="local-info d-flex flex-column justify-content-between">
@@ -170,16 +100,16 @@
                                     </div>
 
                                     <div class="local-description mb-2">
-                                        <%= local.ubicacion %> · <%= local.horario %> · <%= local.tiempo %>
+                                        <%= local.ubicacion %> · <%= local.horario %>
                                     </div>
 
                                     <p class="local-specialty mb-3">
-                                        <%= local.especialidad %>
+                                        <%= local.descripcion %>
                                     </p>
                                 </div>
 
                                 <div class="local-card-footer">
-                                    <span class="products-count"><%= local.productosCount %> productos en carta</span>
+                                    <span class="products-count"><%= local.calificacion ? '★ ' + local.calificacion + ' (' + local.totalCalificaciones + ')' : 'Sin calificaciones aún' %></span>
                                     <span class="action-link">Informacion del local →</span>
                                 </div>
                             </div>
@@ -225,16 +155,9 @@
                 items.forEach(item => {
                     const nombre = item.dataset.nombre;
                     const estado = item.dataset.estado;
-                    const categoria = item.dataset.categoria;
 
                     const coincideTexto = nombre.includes(texto);
-                    let coincideFiltro = true;
-
-                    if (filtroActual === 'abierto') {
-                        coincideFiltro = (estado === 'abierto');
-                    } else if (filtroActual !== 'todos') {
-                        coincideFiltro = (categoria === filtroActual);
-                    }
+                    const coincideFiltro = filtroActual === 'todos' || estado === 'abierto';
 
                     if (coincideTexto && coincideFiltro) {
                         item.classList.remove('d-none');
@@ -249,6 +172,13 @@
             }
 
             inputBuscar.addEventListener('input', filtrarLocales);
+
+            // Viene del buscador del home: /locales?q=texto
+            const q = new URLSearchParams(window.location.search).get('q');
+            if (q) {
+                inputBuscar.value = q;
+                filtrarLocales();
+            }
 
             filterBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
