@@ -112,3 +112,85 @@
   .tab-kpi__valor { font-size: 1.7rem; }
   .tab-bars { gap: 0.2rem; }
 }
+
+
+/* ==========================================================================
+   MEJORA VISUAL DEL TABLERO
+   ========================================================================== */
+
+/* KPIs: franja de color superior distinta por indicador */
+.tab-kpis .owner-card {
+  padding-top: 1.35rem;
+  overflow: hidden;
+}
+
+.tab-kpis .owner-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: #d9402f;
+}
+
+.tab-kpis .owner-card:nth-child(2)::after { background: #2f7a1d; }
+.tab-kpis .owner-card:nth-child(3)::after { background: #b7791f; }
+.tab-kpis .owner-card:nth-child(4)::after { background: #7c6960; }
+
+.tab-kpi__valor {
+  font-size: 2.15rem;
+  color: #261915;
+}
+
+/* Variación como etiqueta (pill) */
+.tab-delta {
+  display: inline-block;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.tab-delta--sube   { background: #e8f5e3; color: #2f7a1d; }
+.tab-delta--baja   { background: #fde8e5; color: #c0291b; }
+.tab-delta--neutro { background: #f3ece8; color: #756b67; }
+
+/* Gráfico de barras */
+.tab-bars {
+  border-bottom: 1px solid #efe3de;
+  background-image: repeating-linear-gradient(
+    to top,
+    transparent 0,
+    transparent calc(25% - 1px),
+    #f6ece8 calc(25% - 1px),
+    #f6ece8 25%
+  );
+}
+
+.tab-bars__bar {
+  background: #f6b9b0;
+}
+
+.tab-bars__bar.is-pico { background: linear-gradient(180deg, #e8503f, #d9402f); }
+.tab-bars__bar.is-bajo { background: #e6d8d2; }
+
+.tab-bars__col:hover .tab-bars__bar { background: #b82d20; }
+
+/* Ventas por local */
+.tab-locales__fila strong {
+  color: #261915;
+}
+
+.tab-locales__pista {
+  height: 0.6rem;
+  background: #f3e8e3;
+}
+
+.tab-locales__barra {
+  background: linear-gradient(90deg, #e8503f, #d9402f);
+}
+
+.tab-locales li:first-child .tab-locales__barra {
+  background: linear-gradient(90deg, #d9402f, #b82d20);
+}

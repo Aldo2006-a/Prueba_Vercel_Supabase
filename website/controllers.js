@@ -1,4 +1,6 @@
 // website/controllers.js
+import { authenticate } from '../admin/services/auth_services.js';
+
 export function home(req, res) { 
   return res.render('website/home', {
     title: 'Crear cuenta :)',
@@ -68,36 +70,43 @@ export function logout(req, res) {
 
 export async function ingresar(req, res) {
   const { correo, password } = req.body;
-  const principal = 'enterprises';
-  const usuarios = [
-    { correo: 'admin@admin', password: '123', role: principal },
-    { correo: 'x@x', password: '123', role: 'owner' },
-    { correo: 'comensal@comensal', password: '123', role: 'comensal' }
-  ];
 
-  const userEncontrado = usuarios.find(u => u.correo === correo && u.password === password);
-
-  if (userEncontrado) {
-    req.session.correo = userEncontrado.correo;
-    req.session.role = userEncontrado.role;
-
-    return req.session.save(() => {
-      if (req.session.role === 'enterprises') return res.redirect('/enterprises');
-      if (req.session.role === 'owner') return res.redirect('/owner');
-      if (req.session.role === 'comensal' || req.session.role === 'comensales') {
-        return res.redirect('/comensales');
-      }
-      return res.redirect('/');
+  const renderError = (mensaje) =>
+    res.render('website/login', {
+      title: 'Login',
+      mensaje,
+      error: mensaje,
+      correoIngresado: correo,
+      log_in_out: esta_logeado(req)
     });
+
+  let resultado;
+  try {
+    resultado = await authenticate(correo, password);
+  } catch (error) {
+    console.error('Error al iniciar sesión:', error);
+    return renderError('No se pudo iniciar sesión. Intenta de nuevo.');
   }
 
-  // Si fallan las credenciales
-  return res.render('website/login', {
-    title: 'Login',
-    mensaje: 'Correo o contraseña incorrectos. Te quedan 4 intentos.',
-    error: 'Correo o contraseña incorrectos. Te quedan 4 intentos.',
-    correoIngresado: correo,
-    log_in_out: esta_logeado(req)
+  if (!resultado.ok) {
+    if (resultado.reason === 'ACCOUNT_BLOCKED') {
+      return renderError('Tu cuenta está bloqueada o suspendida.');
+    }
+    return renderError('Correo o contraseña incorrectos. Te quedan 4 intentos.');
+  }
+
+  const { user } = resultado;
+  req.session.correo = user.email;
+  req.session.role = user.role;
+  req.session.user = user;
+
+  return req.session.save(() => {
+    if (user.role === 'enterprises') return res.redirect('/enterprises');
+    if (user.role === 'owner') return res.redirect('/owner');
+    if (user.role === 'comensal' || user.role === 'comensales') {
+      return res.redirect('/comensales');
+    }
+    return res.redirect('/');
   });
 }
 function esta_logeado(req) {
