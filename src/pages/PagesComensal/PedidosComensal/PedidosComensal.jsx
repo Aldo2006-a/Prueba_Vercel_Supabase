@@ -6,43 +6,10 @@ import './PedidosComensal.css';
 
 export default function PedidosComensal({ pedidos = [] }) {
   const navigate = useNavigate();
-  const [simularSinPedidos, setSimularSinPedidos] = useState(false);
-
-  // VISTA SIN PEDIDOS (PIEZA SUELTA)
-  if (simularSinPedidos) {
-    return (
-      <main className="pedidos-layout">
-        <div className="simulador-bar" style={{ marginBottom: "20px" }}>
-          <span>Probando vista:</span>
-          <button className="btn-simulador" onClick={() => setSimularSinPedidos(false)}>Mostrar lista con pedidos</button>
-        </div>
-
-        <div className="cart-card-container" style={{ textAlign: "center", padding: "48px 20px", maxWidth: "600px", margin: "40px auto" }}>
-          <div style={{ width: "48px", height: "48px", background: "var(--primary-soft)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "var(--primary)", fontSize: "20px" }}>
-            📑
-          </div>
-          <h2 className="locales-title" style={{ fontSize: "22px", textAlign: "center" }}>Aún no tienes pedidos</h2>
-          <p style={{ color: "var(--text-muted)", fontSize: "14px", marginBottom: "24px", textAlign: "center" }}>
-            Cuando pidas en un local del campus verás aquí su avance y su código de recojo.
-          </p>
-          <button className="btn-primary-action" onClick={() => navigate('/comensales/localescomensal')}>
-            Ver locales abiertos
-          </button>
-        </div>
-      </main>
-    );
-  }
 
   // VISTA 4.3 MIS PEDIDOS COMPLETA (IMAGEN 9006d8.png)
   return (
     <main className="pedidos-layout">
-      <div className="simulador-bar" style={{ marginBottom: "20px" }}>
-        <span>Simulador de pruebas:</span>
-        <button className="btn-simulador" onClick={() => setSimularSinPedidos(true)}>
-          Ver estado "Aún no tienes pedidos"
-        </button>
-      </div>
-
       <div className="pedidos-header-row">
         <div>
           <h1 className="locales-title">Mis pedidos</h1>

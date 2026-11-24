@@ -205,20 +205,6 @@ export default function LocalesComensal({ itemsCarrito = [], setItemsCarrito }) 
 
   return (
     <main className="comensal-main-layout">
-      {/* SIMULADOR DE MODO DE PRUEBA */}
-      <div className="simulador-bar">
-        <span>Modo simulador:</span>
-        <button
-          className="btn-simulador"
-          onClick={() => {
-            setEsTodosCerrados(!esTodosCerrados);
-            setLocalSeleccionado(null);
-          }}
-        >
-          {esTodosCerrados ? "Cambiar a Horario Abierto (Día)" : "Cambiar a Fuera de Horario (22:40)"}
-        </button>
-      </div>
-
       {/* CASO: NINGÚN LOCAL ABIERTO */}
       {esTodosCerrados ? (
         <div>

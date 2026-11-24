@@ -9,8 +9,6 @@ export default function ConfirmacionPedido({ items = [], setItems, onConfirmarPe
   // Estados de franja y vista
   const [franjaSeleccionada, setFranjaSeleccionada] = useState("11:30");
   const [pedidoExito, setPedidoExito] = useState(false); // Inicia en el selector de hora por defecto
-  const [simularFueraHorario, setSimularFueraHorario] = useState(false);
-  const [simularRecepcionSuspendida, setSimularRecepcionSuspendida] = useState(false);
 
   const totalCalculado = 36.00;
 
@@ -101,19 +99,6 @@ export default function ConfirmacionPedido({ items = [], setItems, onConfirmarPe
         Cafetería Central · Pabellón A, primer piso · hoy 15/09/2026
       </p>
 
-      {/* BANNER SIMULADOR DE EXCEPCIONES Y ERRORES */}
-      <div className="simulador-bar" style={{ marginBottom: "20px" }}>
-        <span>Probar piezas sueltas de error:</span>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button className="btn-simulador" onClick={() => { setSimularFueraHorario(!simularFueraHorario); setSimularRecepcionSuspendida(false); }}>
-            {simularFueraHorario ? "Quitar fuera de horario" : "Simular franja fuera de horario (19:30)"}
-          </button>
-          <button className="btn-simulador" onClick={() => { setSimularRecepcionSuspendida(!simularRecepcionSuspendida); setSimularFueraHorario(false); }}>
-            {simularRecepcionSuspendida ? "Quitar recepción suspendida" : "Simular recepción suspendida"}
-          </button>
-        </div>
-      </div>
-
       <div className="confirmacion-grid">
         {/* COLUMNA IZQUIERDA: RESUMEN DEL PEDIDO */}
         <div className="confirmacion-card">
@@ -155,22 +140,8 @@ export default function ConfirmacionPedido({ items = [], setItems, onConfirmarPe
 
         {/* COLUMNA DERECHA: SELECTOR DE HORA DE RECOJO DE FRANJAS */}
         <div className="confirmacion-card">
-          {simularRecepcionSuspendida ? (
+          {(
             <div>
-              <div className="banner-alerta-suspendida">
-                Cafetería Central suspendió la recepción de pedidos. Guardamos tu carrito para cuando reabra.
-              </div>
-              <button className="btn-disabled-wide" disabled>Confirmar pedido</button>
-              <button className="btn-outline-wide" onClick={() => navigate('/comensales/localescomensal')}>Ver otros locales abiertos</button>
-            </div>
-          ) : (
-            <div>
-              {simularFueraHorario && (
-                <div className="banner-alerta-franja">
-                  La franja 19:30 quedó fuera del horario del local. Elige otra hora para continuar.
-                </div>
-              )}
-
               <h3 className="section-title" style={{ fontSize: "18px", margin: "0 0 4px 0" }}>Elige tu hora de recojo</h3>
               <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "0 0 16px 0" }}>
                 Franjas de 30 minutos · las tachadas están completas o no alcanzan el tiempo de preparación.

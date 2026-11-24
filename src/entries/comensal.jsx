@@ -19,6 +19,7 @@ import ConfirmacionPedido from '../pages/PagesComensal/CarritoComensal/Confirmac
 
 // 3. CSS base
 import './comensal.css';
+import './comensal-responsive.css';
 
 function ComensalApp() {
   const [itemsCarrito, setItemsCarrito] = useState([

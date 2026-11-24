@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './HeaderComensal.css'
 
-export default function HeaderComensal() {
+export default function HeaderComensal({ cantidadItems = 0 }) {
   const [localSeleccionado, setLocalSeleccionado] = useState('Cafetería Central')
   const [busqueda, setBusqueda] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const menuRef = useRef(null)
 
-  const cantidadCarrito = 3
+  const cantidadCarrito = cantidadItems
   const nombreUsuario = 'Mateo'
   const inicialesUsuario = 'MR'
 
