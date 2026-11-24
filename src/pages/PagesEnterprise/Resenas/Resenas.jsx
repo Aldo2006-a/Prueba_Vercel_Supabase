@@ -1,45 +1,25 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
+import { obtenerMisResenas, responderResena } from '../../../api/resenas';
+import { mensajeDeError } from '../../../api/carta';
 import './Resenas.css';
 
-const RESENAS_INICIALES = [
-  {
-    id: 1,
-    autor: 'María Fernanda',
-    iniciales: 'MF',
-    avatarColor: 'rose',
-    fecha: '2026-10-10',
-    pedido: '#4587',
-    calificacion: 5,
-    producto: 'Sándwich de pollo deshilachado',
-    comentario: 'Llegó rápido y estaba muy rico. El pan estaba fresco.',
-    respuesta: null,
-  },
-  {
-    id: 2,
-    autor: 'Diego R.',
-    iniciales: 'DR',
-    avatarColor: 'blue',
-    fecha: '2026-10-08',
-    pedido: '#4562',
-    calificacion: 4,
-    producto: 'Latte + croissant',
-    comentario: 'Buen sabor, aunque el café llegó un poco tibio.',
-    respuesta: null,
-  },
-  {
-    id: 3,
-    autor: 'Valeria P.',
-    iniciales: 'VP',
-    avatarColor: 'mint',
-    fecha: '2026-09-20',
-    pedido: '#4510',
-    calificacion: 1,
-    producto: 'Ensalada César',
-    comentario: 'El pedido tardó más de lo esperado.',
-    respuesta: null,
-  },
-];
+const COLORES_AVATAR = ['rose', 'blue', 'mint'];
+
+// Calificación de la API -> reseña de la pantalla
+const resenaAPantalla = (r) => ({
+  id: r.id,
+  autor: r.author,
+  iniciales: r.author.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase(),
+  avatarColor: COLORES_AVATAR[r.id % COLORES_AVATAR.length],
+  fecha: r.date,
+  pedido: r.order_code,
+  calificacion: r.rating,
+  producto: r.products.map((p) => p.name).join(', ') || 'Sin productos calificados',
+  productos: r.products,
+  comentario: r.comment || '',
+  respuesta: r.reply,
+});
 
 const FORMATEAR_FECHA = (fecha) =>
   new Date(`${fecha}T12:00:00`).toLocaleDateString('es-PE', {
@@ -52,7 +32,13 @@ const renderEstrellas = (rating) =>
   '★'.repeat(rating) + '☆'.repeat(5 - rating);
 
 export default function Resenas() {
-  const [resenas, setResenas] = useState(RESENAS_INICIALES);
+  const [resenas, setResenas] = useState([]);
+
+  useEffect(() => {
+    obtenerMisResenas()
+      .then((datos) => setResenas(datos.reviews.map(resenaAPantalla)))
+      .catch((e) => setToastMensaje(mensajeDeError(e, 'No se pudieron cargar las reseñas.')));
+  }, []);
   const [filtroEstrellas, setFiltroEstrellas] = useState('todas');
   const [filtroTiempo, setFiltroTiempo] = useState('30_dias');
   const [busqueda, setBusqueda] = useState('');
@@ -122,6 +108,7 @@ export default function Resenas() {
           resena.autor,
           resena.producto,
           resena.comentario,
+          resena.productos.map((p) => p.comment || '').join(' '),
           resena.pedido,
           resena.respuesta || '',
         ].some((valor) =>
@@ -168,21 +155,23 @@ export default function Resenas() {
     setTextoRespuesta('');
   };
 
-  const enviarRespuesta = (e) => {
+  const enviarRespuesta = async (e) => {
     e.preventDefault();
 
     if (!textoRespuesta.trim() || !resenaSeleccionada) return;
 
-    setResenas((anteriores) =>
-      anteriores.map((resena) =>
-        resena.id === resenaSeleccionada.id
-          ? { ...resena, respuesta: textoRespuesta.trim() }
-          : resena
-      )
-    );
+    try {
+      const guardada = resenaAPantalla(await responderResena(resenaSeleccionada.id, textoRespuesta.trim()));
 
-    cerrarModal();
-    setToastMensaje('Respuesta guardada correctamente');
+      setResenas((anteriores) =>
+        anteriores.map((resena) => (resena.id === guardada.id ? guardada : resena))
+      );
+
+      cerrarModal();
+      setToastMensaje('Respuesta guardada correctamente');
+    } catch (err) {
+      setToastMensaje(mensajeDeError(err, 'No se pudo guardar la respuesta.'));
+    }
   };
 
   const descargarReporte = () => {
@@ -364,8 +353,23 @@ export default function Resenas() {
                 </div>
 
                 <div className="review-body">
-                  <div className="product-name">{item.producto}</div>
-                  <div className="review-comment">{item.comentario}</div>
+                  {item.productos.length === 0 && (
+                    <div className="product-name">{item.producto}</div>
+                  )}
+                  {item.comentario && (
+                    <div className="review-comment">
+                      <strong>Sobre el local:</strong> {item.comentario}
+                    </div>
+                  )}
+                  {item.productos.map((prod) => (
+                    <div className="review-comment" key={prod.product_id}>
+                      <strong>{prod.name}</strong>{' '}
+                      <span className="review-stars" aria-label={`${prod.rating} de 5 estrellas`}>
+                        {renderEstrellas(prod.rating)}
+                      </span>
+                      {prod.comment && <> — {prod.comment}</>}
+                    </div>
+                  ))}
 
                   {item.respuesta && (
                     <div className="business-reply">

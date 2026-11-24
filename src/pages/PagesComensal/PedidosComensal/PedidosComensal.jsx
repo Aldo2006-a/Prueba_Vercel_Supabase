@@ -107,11 +107,14 @@ export default function PedidosComensal() {
             >
               {desplegado ? 'Ocultar detalle' : 'Ver detalle'}
             </button>
-            {esEntregado && (
+            {esEntregado && p.reviewed && (
+              <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>Calificado ✓</span>
+            )}
+            {esEntregado && !p.reviewed && (
               <button
                 className="btn-primary-action"
                 style={{ minHeight: "36px", padding: "0 14px", fontSize: "13px", background: "#5B9B2E" }}
-                onClick={() => navigate('/comensales/calificaciones')}
+                onClick={() => navigate(`/comensales/calificaciones?pedido=${p.id}`)}
               >
                 Calificar
               </button>

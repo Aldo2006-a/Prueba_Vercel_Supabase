@@ -1,14 +1,16 @@
 import storeRepository from '../repositories/stores_repository.js';
+import { fetchRatingsByStore } from './reviews_services.js';
 import { normalizeSchedule, storeStatus } from './schedule_rules.js';
 
 /**
  * Local + su horario y si está abierto ahora (hora de Lima)
  */
-const withSchedule = (store) => {
+const withSchedule = (store, ratings = {}) => {
   const { schedules, ...data } = store.toJSON();
   const schedule = normalizeSchedule(schedules);
+  const rating = ratings[store.id] || { average: null, total: 0 };
 
-  return { ...data, schedule, ...storeStatus(schedule) };
+  return { ...data, schedule, ...storeStatus(schedule), rating_average: rating.average, rating_count: rating.total };
 };
 
 /**
@@ -20,7 +22,9 @@ export const fetchAllActive = async () => {
     order: [['id', 'ASC']]
   });
 
-  return stores.map(withSchedule);
+  const ratings = await fetchRatingsByStore();
+
+  return stores.map((store) => withSchedule(store, ratings));
 };
 
 /**
@@ -33,7 +37,7 @@ export const fetchActiveById = async (id) => {
     return null;
   }
 
-  return withSchedule(store);
+  return withSchedule(store, await fetchRatingsByStore());
 };
 
 /**

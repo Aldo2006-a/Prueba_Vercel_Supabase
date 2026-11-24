@@ -15,6 +15,7 @@ import * as cartApis from '../apis/carts_apis.js';
 import * as orderApis from '../apis/orders_apis.js';
 import * as scheduleApis from '../apis/schedules_apis.js';
 import * as optionGroupApis from '../apis/option_groups_apis.js';
+import * as reviewApis from '../apis/reviews_apis.js';
 import * as registrationApis from '../apis/registration_apis.js';
 import * as storeRequestApis from '../apis/store_requests_apis.js';
 import { loadMyDiner } from '../apis/diners_apis.js';
@@ -71,6 +72,13 @@ router.get('/api/v1/users/:id', requireRole('owner'), userApis.getUserById);
 // api registro (público): crear cuenta de comensal y solicitar el registro de un local
 router.post('/api/v1/register/comensal', registrationApis.registerDiner);
 router.post('/api/v1/register/local', registrationApis.registerStore);
+
+// api calificaciones: el comensal califica pedidos entregados; el local las ve y responde
+router.post('/api/v1/my-orders/:id/review', requireRole('comensal'), loadMyDiner, reviewApis.createMyReview);
+router.get('/api/v1/my-reviews', requireRole('comensal'), loadMyDiner, reviewApis.listMyReviews);
+router.get('/api/v1/stores/:id/reviews', requireAuth, reviewApis.listStoreReviews);
+router.get('/api/v1/my-store/reviews', requireRole('enterprises'), storeApis.loadMyStore, reviewApis.listMyStoreReviews);
+router.patch('/api/v1/my-store/reviews/:id/reply', requireRole('enterprises'), storeApis.loadMyStore, reviewApis.replyMyStoreReview);
 
 // api solicitudes de local (solo owner): revisar, aprobar u observar
 router.get('/api/v1/store-requests', requireRole('owner'), storeRequestApis.listStoreRequests);

@@ -37,7 +37,7 @@ export const localALista = (local) => ({
   estado: local.open_now ? 'Abierto' : 'Cerrado',
   ubicacion: local.campus_location || '',
   tiempoPrep: '',
-  calificacion: null,
+  calificacion: local.rating_average ?? null,
   aperturaProx: textoApertura(local.next_open),
 });
 

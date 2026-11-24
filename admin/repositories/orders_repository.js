@@ -1,9 +1,10 @@
 import { Op } from 'sequelize';
 import sequelize from '../../configs/database.js';
-import { Order, OrderItem, OrderItemOption, OrderStatus, Diner, Store, Cart } from '../models/associations.js';
+import { Order, OrderItem, OrderItemOption, OrderReview, OrderStatus, Diner, Store, Cart } from '../models/associations.js';
 
 const orderInclude = [
   { model: OrderStatus, as: 'status', attributes: ['id', 'name'] },
+  { model: OrderReview, as: 'review', attributes: ['id'] },
   { model: Store, as: 'store', attributes: ['id', 'commercial_name', 'campus_location'] },
   { model: Diner, as: 'diner', attributes: ['id', 'first_name', 'last_name'] },
   { model: OrderItem, as: 'items', include: [{ model: OrderItemOption, as: 'options' }] }

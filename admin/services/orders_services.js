@@ -24,6 +24,7 @@ const toView = (order) => {
   const items = order.items.map((item) => ({
     id: item.id,
     name: item.product_name,
+    product_id: item.product_id,
     unit_price: item.unit_price,
     quantity: item.quantity,
     subtotal: item.subtotal,
@@ -38,6 +39,7 @@ const toView = (order) => {
     id: order.id,
     code: order.code,
     status: order.status.name,
+    reviewed: Boolean(order.review),
     pickup_date: order.pickup_date,
     pickup_time: String(order.pickup_time).slice(0, 5),
     total: order.total_amount,

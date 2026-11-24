@@ -14,6 +14,8 @@ import OptionGroup from './option_group.js';
 import ProductOption from './product_option.js';
 import CartItemOption from './cart_item_option.js';
 import OrderItemOption from './order_item_option.js';
+import OrderReview from './order_review.js';
+import ProductReview from './product_review.js';
 
 // roles 1 --- N users
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -59,6 +61,18 @@ CartItemOption.belongsTo(ProductOption, { foreignKey: 'product_option_id', as: '
 OrderItem.hasMany(OrderItemOption, { foreignKey: 'order_item_id', as: 'options' });
 OrderItemOption.belongsTo(OrderItem, { foreignKey: 'order_item_id', as: 'item' });
 
+// calificaciones: un pedido tiene una calificación (local + productos)
+Order.hasOne(OrderReview, { foreignKey: 'order_id', as: 'review' });
+OrderReview.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
+Diner.hasMany(OrderReview, { foreignKey: 'diner_id', as: 'reviews' });
+OrderReview.belongsTo(Diner, { foreignKey: 'diner_id', as: 'diner' });
+Store.hasMany(OrderReview, { foreignKey: 'store_id', as: 'reviews' });
+OrderReview.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
+OrderReview.hasMany(ProductReview, { foreignKey: 'order_review_id', as: 'products' });
+ProductReview.belongsTo(OrderReview, { foreignKey: 'order_review_id', as: 'review' });
+Product.hasMany(ProductReview, { foreignKey: 'product_id', as: 'reviews' });
+ProductReview.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+
 // diners 1 --- 1 carts, stores 1 --- N carts
 Diner.hasOne(Cart, { foreignKey: 'diner_id', as: 'cart' });
 Cart.belongsTo(Diner, { foreignKey: 'diner_id', as: 'diner' });
@@ -83,4 +97,4 @@ Order.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
-export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule, OptionGroup, ProductOption, CartItemOption, OrderItemOption };
+export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule, OptionGroup, ProductOption, CartItemOption, OrderItemOption, OrderReview, ProductReview };

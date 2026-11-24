@@ -1,24 +1,7 @@
 // src/pages/PagesComensal/LocalesComensal/ResenasLocal.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { obtenerResenasLocal } from '../../../api/resenas';
 import './ResenasLocal.css';
-
-// Datos de ejemplo de las reseñas (luego vendrán del backend)
-const DISTRIBUCION = [
-  { estrellas: 5, cantidad: 92 },
-  { estrellas: 4, cantidad: 21 },
-  { estrellas: 3, cantidad: 9 },
-  { estrellas: 2, cantidad: 4 },
-  { estrellas: 1, cantidad: 2 },
-];
-
-const RESENAS = [
-  { id: 1, autor: "Camila Ayala", estrellas: 5, fecha: "2026-09-14", texto: "Pedí a las 07:30 y estaba listo justo a tiempo. El sándwich de pollo, muy generoso, y el café bien cargado.", productos: ["Sándwich de pollo deshilachado", "Café pasado"] },
-  { id: 2, autor: "Joaquín Bravo", estrellas: 3, fecha: "2026-09-11", texto: "Buena comida, pero esperé cinco minutos extra en el mostrador al mediodía.", productos: ["Menú ejecutivo"] },
-  { id: 3, autor: "Sofía Cárdenas", estrellas: 4, fecha: "2026-09-09", texto: "Muy práctico pedir entre clases. La ensalada de frutas se agota temprano, conviene pedirla antes de las 09:00.", productos: ["Ensalada de frutas"] },
-  { id: 4, autor: "Diego Rojas", estrellas: 5, fecha: "2026-09-05", texto: "El pan con palta siempre fresco. Recojo rápido incluso en hora punta.", productos: ["Pan con palta"] },
-  { id: 5, autor: "Valeria Núñez", estrellas: 2, fecha: "2026-09-02", texto: "Mi pedido salió frío y faltó la servilleta. Espero que mejoren.", productos: ["Empanada de carne", "Chicha morada"] },
-  { id: 6, autor: "Andrés Paredes", estrellas: 4, fecha: "2026-08-29", texto: "Buen jugo surtido y precio justo. A veces la cola para recoger es larga.", productos: ["Jugo surtido"] },
-];
 
 const POR_PAGINA = 3;
 
@@ -60,16 +43,40 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
   const [orden, setOrden] = useState("recientes");
   const [pagina, setPagina] = useState(1);
 
-  const totalCalificaciones = DISTRIBUCION.reduce((acc, d) => acc + d.cantidad, 0);
+  const [resenas, setResenas] = useState([]);
+  const [resumen, setResumen] = useState(null);
+  const [cargando, setCargando] = useState(true);
 
-  // Las reseñas aún son de ejemplo: si el local no trae calificación, se usa el promedio de la distribución de ejemplo
-  const calificacion =
-    local.calificacion ??
-    DISTRIBUCION.reduce((acc, d) => acc + d.estrellas * d.cantidad, 0) / totalCalificaciones;
-  const maxCantidad = Math.max(...DISTRIBUCION.map((d) => d.cantidad));
+  useEffect(() => {
+    obtenerResenasLocal(local.id)
+      .then((datos) => {
+        setResumen(datos.summary);
+        setResenas(
+          datos.reviews.map((r) => ({
+            id: r.id,
+            autor: r.author,
+            estrellas: r.rating,
+            fecha: r.date,
+            texto: r.comment || "",
+            respuesta: r.reply,
+            productos: r.products.map((p) => p.name),
+          }))
+        );
+      })
+      .catch(() => setResenas([]))
+      .finally(() => setCargando(false));
+  }, [local.id]);
+
+  const DISTRIBUCION = [5, 4, 3, 2, 1].map((estrellas) => ({
+    estrellas,
+    cantidad: resumen ? resumen.distribution[estrellas] : 0,
+  }));
+  const totalCalificaciones = resumen ? resumen.total : 0;
+  const calificacion = resumen && resumen.average !== null ? resumen.average : 0;
+  const maxCantidad = Math.max(1, ...DISTRIBUCION.map((d) => d.cantidad));
 
   const filtroActivo = FILTROS.find((f) => f.id === filtro);
-  const resenasFiltradas = RESENAS.filter(filtroActivo.cumple).sort(ORDENES[orden]);
+  const resenasFiltradas = resenas.filter(filtroActivo.cumple).sort(ORDENES[orden]);
   const totalPaginas = Math.max(1, Math.ceil(resenasFiltradas.length / POR_PAGINA));
   const inicio = (pagina - 1) * POR_PAGINA;
   const resenasPagina = resenasFiltradas.slice(inicio, inicio + POR_PAGINA);
@@ -100,7 +107,7 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
         {/* COLUMNA IZQUIERDA: RESUMEN */}
         <aside>
           <div className="resenas-card resenas-score-card">
-            <span className="resenas-score">{calificacion.toFixed(1)}</span>
+            <span className="resenas-score">{totalCalificaciones ? calificacion.toFixed(1) : "—"}</span>
             <Estrellas valor={calificacion} className="resenas-stars--lg" />
             <span className="resenas-score-count">{totalCalificaciones} calificaciones</span>
           </div>
@@ -112,7 +119,7 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
                 <div className="resenas-dist-bar">
                   <div
                     className="resenas-dist-fill"
-                    style={{ width: `${(d.cantidad / totalCalificaciones) * 100}%`, background: colorBarra(d.estrellas), minWidth: d.cantidad > 0 && d.cantidad < maxCantidad ? "4px" : 0 }}
+                    style={{ width: `${totalCalificaciones ? (d.cantidad / totalCalificaciones) * 100 : 0}%`, background: colorBarra(d.estrellas), minWidth: d.cantidad > 0 && d.cantidad < maxCantidad ? "4px" : 0 }}
                   ></div>
                 </div>
                 <span className="resenas-dist-count">{d.cantidad}</span>
@@ -144,7 +151,7 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
           </div>
 
           {resenasPagina.length === 0 ? (
-            <div className="resenas-card resenas-vacio">No hay reseñas con este filtro todavía.</div>
+            <div className="resenas-card resenas-vacio">{cargando ? "Cargando reseñas…" : "No hay reseñas con este filtro todavía."}</div>
           ) : (
             resenasPagina.map((r) => (
               <article key={r.id} className="resenas-card resenas-item">
@@ -156,7 +163,8 @@ export default function ResenasLocal({ local, onVolverLocales, onVerCarta }) {
                   </div>
                   <span className="resenas-fecha">{formatearFecha(r.fecha)}</span>
                 </div>
-                <p className="resenas-texto">{r.texto}</p>
+                {r.texto && <p className="resenas-texto">{r.texto}</p>}
+                {r.respuesta && <p className="resenas-texto"><strong>Respuesta del local:</strong> {r.respuesta}</p>}
                 <div className="resenas-tags">
                   {r.productos.map((p) => (
                     <span key={p} className="resenas-tag">{p}</span>
