@@ -14,6 +14,8 @@ import * as profileApis from '../apis/profile_apis.js';
 import * as cartApis from '../apis/carts_apis.js';
 import * as orderApis from '../apis/orders_apis.js';
 import * as scheduleApis from '../apis/schedules_apis.js';
+import * as registrationApis from '../apis/registration_apis.js';
+import * as storeRequestApis from '../apis/store_requests_apis.js';
 import { loadMyDiner } from '../apis/diners_apis.js';
 import { requireRole, requireAuth } from '../../configs/middlewares.js';
 
@@ -64,6 +66,14 @@ router.get('/api/v1/roles', requireRole('owner'), roleApis.listRoles);
 router.get('/api/v1/roles/:id', requireRole('owner'), roleApis.getRoleById);
 router.get('/api/v1/users', requireRole('owner'), userApis.listUsers);
 router.get('/api/v1/users/:id', requireRole('owner'), userApis.getUserById);
+
+// api registro (público): crear cuenta de comensal y solicitar el registro de un local
+router.post('/api/v1/register/comensal', registrationApis.registerDiner);
+router.post('/api/v1/register/local', registrationApis.registerStore);
+
+// api solicitudes de local (solo owner): revisar, aprobar u observar
+router.get('/api/v1/store-requests', requireRole('owner'), storeRequestApis.listStoreRequests);
+router.patch('/api/v1/store-requests/:id/status', requireRole('owner'), storeRequestApis.changeStoreRequestStatus);
 
 // api locales y carta (cualquier usuario con sesión)
 router.get('/api/v1/me', requireAuth, profileApis.getMe);

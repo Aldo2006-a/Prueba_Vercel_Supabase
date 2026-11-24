@@ -14,6 +14,15 @@ const Store = sequelize.define('Store', {
     campus_location: {
         type: DataTypes.STRING(100),
     },
+    ruc: {
+        type: DataTypes.STRING(11),
+        unique: true,
+    },
+    campus: {
+        type: DataTypes.STRING(30),
+        allowNull: false,
+        defaultValue: 'Monterrico',
+    },
     logo_url: {
         type: DataTypes.STRING(150),
     },

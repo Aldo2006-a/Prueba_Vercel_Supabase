@@ -89,6 +89,12 @@ export async function ingresar(req, res) {
   }
 
   if (!resultado.ok) {
+    if (resultado.reason === 'ACCOUNT_PENDING') {
+      return renderError('Tu solicitud de registro aún está en revisión. Te avisaremos cuando sea aprobada.');
+    }
+    if (resultado.reason === 'ACCOUNT_REJECTED') {
+      return renderError('Tu solicitud de registro fue observada. Comunícate con la administración del campus.');
+    }
     if (resultado.reason === 'ACCOUNT_BLOCKED') {
       return renderError('Tu cuenta está bloqueada o suspendida.');
     }

@@ -12,17 +12,25 @@ const verifyPassword = (plainPassword, storedPassword) => {
 /**
  * Valida correo y contraseña contra la base de datos.
  * Devuelve { ok: true, user } o { ok: false, reason }.
- * reason: 'INVALID_CREDENTIALS' | 'ACCOUNT_BLOCKED'
+ * reason: 'INVALID_CREDENTIALS' | 'ACCOUNT_BLOCKED' | 'ACCOUNT_PENDING' | 'ACCOUNT_REJECTED'
  */
 export const authenticate = async (email, password) => {
   if (!email || !password) {
     return { ok: false, reason: 'INVALID_CREDENTIALS' };
   }
 
-  const user = await userRepository.findByEmailWithPassword(email.trim());
+  const user = await userRepository.findByEmailWithPassword(email.trim().toLowerCase());
 
   if (!user || !verifyPassword(password, user.password)) {
     return { ok: false, reason: 'INVALID_CREDENTIALS' };
+  }
+
+  if (user.status === 'pendiente') {
+    return { ok: false, reason: 'ACCOUNT_PENDING' };
+  }
+
+  if (user.status === 'rechazado') {
+    return { ok: false, reason: 'ACCOUNT_REJECTED' };
   }
 
   if (user.status !== 'activo') {
