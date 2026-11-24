@@ -27,7 +27,11 @@ const toView = (order) => {
     unit_price: item.unit_price,
     quantity: item.quantity,
     subtotal: item.subtotal,
-    notes: item.notes
+    notes: item.notes,
+    options: item.options.map((option) => ({
+      name: option.option_name,
+      additional_price: option.additional_price
+    }))
   }));
 
   return {
@@ -104,14 +108,24 @@ export const createFromCart = async (dinerId, data = {}) => {
 
   const status = await orderRepository.findStatusByName('recibido');
 
-  const items = cart.items.map((item) => ({
-    product_name: item.product.name,
-    unit_price: item.product.price,
-    quantity: item.quantity,
-    subtotal: redondear(item.product.price * item.quantity),
-    notes: item.notes,
-    product_id: item.product_id
-  }));
+  // El precio unitario incluye las opciones elegidas; cada opción se copia con su nombre y precio de hoy
+  const items = cart.items.map((item) => {
+    const options = item.chosen.map((choice) => ({
+      option_name: choice.option.name,
+      additional_price: choice.option.additional_price
+    }));
+    const unitPrice = redondear(item.product.price + options.reduce((sum, option) => sum + option.additional_price, 0));
+
+    return {
+      product_name: item.product.name,
+      unit_price: unitPrice,
+      quantity: item.quantity,
+      subtotal: redondear(unitPrice * item.quantity),
+      notes: item.notes,
+      product_id: item.product_id,
+      options
+    };
+  });
 
   const orderId = await orderRepository.createFromCart({
     order: {

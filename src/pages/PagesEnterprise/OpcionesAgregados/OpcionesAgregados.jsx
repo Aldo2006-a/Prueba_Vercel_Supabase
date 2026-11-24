@@ -1,115 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+    obtenerProductos, obtenerGruposDeProducto, crearGrupo, actualizarGrupo,
+    eliminarGrupoApi, mensajeDeError,
+} from '../../../api/carta';
 import SelectorProductos from './SelectorProductos';
 import ListaGrupos from './ListaGrupos';
 import FormularioGrupo from './FormularioGrupo';
 import './OpcionesAgregados.css';
 
-const PRODUCTOS_INICIALES = [
-    {
-        id: 1,
-        nombre: 'Sándwich de pollo deshilachado',
-        categoria: 'Sándwiches',
-        precio: 12.50,
-        imagen: '',
-        grupos: [
-            {
-                id: 1, nombre: 'Tipo de pan', seleccion: 'unica', obligatorio: true,
-                alternativas: [
-                    { id: 11, nombre: 'Pan francés', precio: 0 },
-                    { id: 12, nombre: 'Pan ciabatta', precio: 1.0 },
-                    { id: 13, nombre: 'Pan integral', precio: 1.5 },
-                ],
-            },
-            {
-                id: 2, nombre: 'Agregados', seleccion: 'multiple', obligatorio: false,
-                alternativas: [
-                    { id: 21, nombre: 'Agregar queso', precio: 2.0 },
-                    { id: 22, nombre: 'Palta extra', precio: 2.5 },
-                    { id: 23, nombre: 'Doble porción de pollo', precio: 4.0 },
-                ],
-            },
-            {
-                id: 3, nombre: 'Para llevar', seleccion: 'unica', obligatorio: false,
-                alternativas: [
-                    { id: 31, nombre: 'En el local', precio: 0 },
-                    { id: 32, nombre: 'Empaque para llevar', precio: 0.5 },
-                ],
-            },
-        ],
-    },
-    {
-        id: 2,
-        nombre: 'Café Americano / Espresso',
-        categoria: 'Bebidas calientes',
-        precio: 6.50,
-        imagen: '',
-        grupos: [
-            {
-                id: 101, nombre: 'Tamaño del vaso', seleccion: 'unica', obligatorio: true,
-                alternativas: [
-                    { id: 1011, nombre: 'Regular (8 oz)', precio: 0 },
-                    { id: 1012, nombre: 'Grande (12 oz)', precio: 2.0 },
-                ],
-            },
-            {
-                id: 102, nombre: 'Endulzante', seleccion: 'unica', obligatorio: false,
-                alternativas: [
-                    { id: 1021, nombre: 'Azúcar rubia', precio: 0 },
-                    { id: 1022, nombre: 'Stevia', precio: 0 },
-                    { id: 1023, nombre: 'Sin endulzante', precio: 0 },
-                ],
-            },
-        ],
-    },
-    {
-        id: 3,
-        nombre: 'Bowl de Ensalada César con Pollo',
-        categoria: 'Platos de fondo',
-        precio: 16.00,
-        imagen: '',
-        grupos: [
-            {
-                id: 201, nombre: 'Tipo de aliño', seleccion: 'unica', obligatorio: true,
-                alternativas: [
-                    { id: 2011, nombre: 'Aliño César clásico', precio: 0 },
-                    { id: 2012, nombre: 'Vinagreta de la casa', precio: 0 },
-                ],
-            },
-        ],
-    },
-    {
-        id: 4,
-        nombre: 'Empanada artesanal horneada',
-        categoria: 'Snacks y postres',
-        precio: 7.00,
-        imagen: '',
-        grupos: [],
-    },
-    {
-        id: 5,
-        nombre: 'Jugo de frutas natural',
-        categoria: 'Bebidas frías',
-        precio: 8.50,
-        imagen: '',
-        grupos: [
-            {
-                id: 301, nombre: 'Temperatura', seleccion: 'unica', obligatorio: true,
-                alternativas: [
-                    { id: 3011, nombre: 'Sin helar', precio: 0 },
-                    { id: 3012, nombre: 'Helado (con hielo)', precio: 0 },
-                ],
-            },
-        ],
-    },
-    {
-        id: 6,
-        nombre: 'Croissant mixto de jamón y queso',
-        categoria: 'Sándwiches',
-        precio: 10.50,
-        imagen: '',
-        grupos: [],
-    },
-];
+// Grupo de la API -> grupo de la pantalla
+const grupoAPantalla = (g) => ({
+    id: g.id,
+    nombre: g.name,
+    seleccion: g.selection_type,
+    obligatorio: g.is_required,
+    alternativas: g.options.map((o) => ({ id: o.id, nombre: o.name, precio: o.additional_price })),
+});
+
+// Grupo de la pantalla -> cuerpo que espera la API
+const grupoAApi = (g) => ({
+    name: g.nombre,
+    selection_type: g.seleccion,
+    is_required: g.obligatorio,
+    options: g.alternativas.map((a) => ({ name: a.nombre, additional_price: a.precio })),
+});
 
 const FORM_VACIO = {
     id: null,
@@ -123,7 +37,8 @@ const FORM_VACIO = {
 };
 
 export default function OpcionesAgregados() {
-    const [productos, setProductos] = useState(PRODUCTOS_INICIALES);
+    const [productos, setProductos] = useState([]);
+    const [cargando, setCargando] = useState(true);
     const [productoIdActivo, setProductoIdActivo] = useState(null);
     const [busqueda, setBusqueda] = useState('');
     const [categoriaFiltro, setCategoriaFiltro] = useState('Todas');
@@ -131,6 +46,30 @@ export default function OpcionesAgregados() {
     const [form, setForm] = useState(FORM_VACIO);
     const [error, setError] = useState('');
     const [aviso, setAviso] = useState('');
+
+    useEffect(() => {
+        const cargar = async () => {
+            try {
+                const lista = await obtenerProductos();
+                const conGrupos = await Promise.all(
+                    lista.map(async (p) => ({
+                        id: p.id,
+                        nombre: p.name,
+                        categoria: p.category?.name || 'Sin categoría',
+                        precio: Number(p.price),
+                        imagen: p.picture_url || '',
+                        grupos: (await obtenerGruposDeProducto(p.id)).map(grupoAPantalla),
+                    }))
+                );
+                setProductos(conGrupos);
+            } catch (e) {
+                setError(mensajeDeError(e, 'No se pudo cargar tu carta.'));
+            } finally {
+                setCargando(false);
+            }
+        };
+        cargar();
+    }, []);
 
     const productoActual = productos.find((p) => p.id === productoIdActivo) || null;
     const grupos = productoActual ? productoActual.grupos : [];
@@ -192,7 +131,7 @@ export default function OpcionesAgregados() {
     const quitarAlternativa = (id) =>
         setForm((f) => ({ ...f, alternativas: f.alternativas.filter((a) => a.id !== id) }));
 
-    const guardar = (e) => {
+    const guardar = async (e) => {
         e.preventDefault();
         setAviso('');
 
@@ -205,31 +144,40 @@ export default function OpcionesAgregados() {
         if (alternativas.length === 0) return setError('Agrega al menos una alternativa con nombre.');
         if (alternativas.some((a) => a.precio < 0)) return setError('El precio no puede ser negativo.');
 
-        const grupo = {
-            id: form.id ?? Date.now(),
-            nombre,
-            seleccion: form.seleccion,
-            obligatorio: form.obligatorio,
-            alternativas,
-        };
+        const cuerpo = grupoAApi({ nombre, seleccion: form.seleccion, obligatorio: form.obligatorio, alternativas });
 
-        const nuevosGrupos = editando
-            ? grupos.map((g) => (g.id === grupo.id ? grupo : g))
-            : [...grupos, grupo];
-
-        actualizarGruposProducto(nuevosGrupos);
-        setAviso(editando ? `Grupo «${nombre}» actualizado.` : `Grupo «${nombre}» creado.`);
-        setError('');
-        setForm({ ...FORM_VACIO, alternativas: FORM_VACIO.alternativas.map((a) => ({ ...a })) });
+        try {
+            const guardado = grupoAPantalla(
+                editando
+                    ? await actualizarGrupo(form.id, cuerpo)
+                    : await crearGrupo(productoIdActivo, cuerpo)
+            );
+            actualizarGruposProducto(
+                editando ? grupos.map((g) => (g.id === guardado.id ? guardado : g)) : [...grupos, guardado]
+            );
+            setAviso(editando ? `Grupo «${nombre}» actualizado.` : `Grupo «${nombre}» creado.`);
+            setError('');
+            setForm({ ...FORM_VACIO, alternativas: FORM_VACIO.alternativas.map((a) => ({ ...a })) });
+        } catch (err) {
+            setError(mensajeDeError(err, 'No se pudo guardar el grupo.'));
+        }
     };
 
-    const eliminarGrupo = () => {
+    const eliminarGrupo = async () => {
         if (!window.confirm(`¿Eliminar el grupo «${form.nombre}»?`)) return;
-        const nuevosGrupos = grupos.filter((g) => g.id !== form.id);
-        actualizarGruposProducto(nuevosGrupos);
-        setAviso(`Grupo «${form.nombre}» eliminado.`);
-        nuevoGrupo();
+        try {
+            await eliminarGrupoApi(form.id);
+            actualizarGruposProducto(grupos.filter((g) => g.id !== form.id));
+            setAviso(`Grupo «${form.nombre}» eliminado.`);
+            nuevoGrupo();
+        } catch (err) {
+            setError(mensajeDeError(err, 'No se pudo eliminar el grupo.'));
+        }
     };
+
+    if (cargando) {
+        return <main className="app-content"><p className="text-muted-custom">Cargando tu carta…</p></main>;
+    }
 
     // VISTA 1: Selector de productos
     if (!productoActual) {

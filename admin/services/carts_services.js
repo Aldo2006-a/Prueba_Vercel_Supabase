@@ -1,5 +1,6 @@
 import cartRepository from '../repositories/carts_repository.js';
 import productRepository from '../repositories/products_repository.js';
+import optionGroupRepository from '../repositories/option_groups_repository.js';
 import storeRepository from '../repositories/stores_repository.js';
 import { serviceError } from './errors.js';
 
@@ -17,14 +18,23 @@ const toView = (cart) => {
   }
 
   const items = cart.items.map((item) => {
-    const price = item.product.price;
+    const options = item.chosen.map((choice) => ({
+      id: choice.option.id,
+      name: choice.option.name,
+      additional_price: choice.option.additional_price
+    }));
+    const extras = redondear(options.reduce((sum, option) => sum + option.additional_price, 0));
+    // price = precio de una unidad con sus opciones incluidas
+    const price = redondear(item.product.price + extras);
 
     return {
       id: item.id,
       product_id: item.product_id,
       name: item.product.name,
       description: item.product.description,
+      base_price: item.product.price,
       price,
+      options,
       quantity: item.quantity,
       notes: item.notes,
       subtotal: redondear(price * item.quantity),
@@ -54,6 +64,50 @@ const parseQuantity = (value, fallback) => {
   }
 
   return quantity;
+};
+
+/**
+ * Valida las opciones elegidas contra los grupos del producto:
+ * deben pertenecer al producto, no repetirse, respetar "única" y cubrir los grupos obligatorios.
+ * Devuelve los ids ordenados.
+ */
+const parseOptions = async (productId, value) => {
+  const chosen = value === undefined || value === null ? [] : value;
+
+  if (!Array.isArray(chosen) || chosen.some((id) => !Number.isInteger(id) || id < 1)) {
+    throw serviceError(400, 'INVALID_OPTIONS', 'Las opciones elegidas son inválidas');
+  }
+
+  if (new Set(chosen).size !== chosen.length) {
+    throw serviceError(400, 'INVALID_OPTIONS', 'Hay opciones repetidas');
+  }
+
+  const groups = await optionGroupRepository.findAllByProduct(productId);
+  const known = new Set(groups.flatMap((group) => group.options.map((option) => option.id)));
+
+  if (chosen.some((id) => !known.has(id))) {
+    throw serviceError(400, 'INVALID_OPTIONS', 'Una opción elegida no pertenece a este producto');
+  }
+
+  for (const group of groups) {
+    const count = group.options.filter((option) => chosen.includes(option.id)).length;
+
+    if (group.selection_type === 'unica' && count > 1) {
+      throw serviceError(400, 'INVALID_OPTIONS', `En «${group.name}» solo puedes elegir una opción`);
+    }
+
+    if (group.is_required && count === 0) {
+      throw serviceError(400, 'OPTION_REQUIRED', `Elige una opción en «${group.name}»`);
+    }
+  }
+
+  return [...chosen].sort((a, b) => a - b);
+};
+
+const sameOptions = (item, optionIds) => {
+  const current = item.chosen.map((choice) => choice.product_option_id).sort((a, b) => a - b);
+
+  return current.length === optionIds.length && current.every((id, index) => id === optionIds[index]);
 };
 
 const parseNotes = (value) => {
@@ -100,6 +154,8 @@ export const addItem = async (dinerId, data = {}) => {
     throw serviceError(409, 'PRODUCT_UNAVAILABLE', 'El producto está agotado');
   }
 
+  const optionIds = await parseOptions(product.id, data.options);
+
   let cart = await cartRepository.findByDiner(dinerId);
 
   if (cart && cart.store_id !== store.id) {
@@ -120,10 +176,11 @@ export const addItem = async (dinerId, data = {}) => {
 
   cart = await cartRepository.findByDiner(dinerId);
 
-  const existing = await cartRepository.findItem(cart.id, product.id, notes);
+  // Mismo producto, misma nota y mismas opciones: se suma la cantidad
+  const candidates = await cartRepository.findItems(cart.id, product.id, notes);
+  const existing = candidates.find((item) => sameOptions(item, optionIds));
 
   if (existing) {
-    // Mismo producto con la misma nota: se suma la cantidad
     const total = existing.quantity + quantity;
 
     if (total > MAX_QUANTITY) {
@@ -137,7 +194,7 @@ export const addItem = async (dinerId, data = {}) => {
       product_id: product.id,
       quantity,
       notes
-    });
+    }, optionIds);
   }
 
   return await fetchCart(dinerId);

@@ -130,6 +130,7 @@ export default function PedidosComensal() {
               <div key={i.id} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0" }}>
                 <span>
                   {i.quantity} × {i.name}
+                  {i.options && i.options.length > 0 && <span style={{ color: "var(--text-muted)" }}> · {i.options.map((o) => o.name).join(', ')}</span>}
                   {i.notes && <span style={{ color: "var(--text-muted)" }}> · Nota: {i.notes}</span>}
                 </span>
                 <strong>{soles(i.subtotal)}</strong>

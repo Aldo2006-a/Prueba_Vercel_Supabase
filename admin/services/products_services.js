@@ -74,6 +74,15 @@ export const fetchByStore = async (storeId) => {
 };
 
 /**
+ * Carta pública del local, con los grupos de opciones de cada producto
+ */
+export const fetchByStoreWithOptions = async (storeId) => {
+  const products = await productRepository.findAllByStoreWithOptions(storeId);
+
+  return products.map(product => product.toJSON());
+};
+
+/**
  * Obtener un producto del local por su ID
  */
 export const fetchById = async (storeId, id) => {

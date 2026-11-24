@@ -12,8 +12,8 @@ export const CARRITO_VACIO = { id: null, store: null, items: [], total: 0, count
 
 export const obtenerCarrito = async () => datos(await api.get('/my-cart'));
 
-export const agregarAlCarrito = async ({ product_id, quantity, notes }) =>
-  datos(await api.post('/my-cart/items', { product_id, quantity, notes }));
+export const agregarAlCarrito = async ({ product_id, quantity, notes, options }) =>
+  datos(await api.post('/my-cart/items', { product_id, quantity, notes, options }));
 
 export const cambiarCantidadCarrito = async (idItem, quantity) =>
   datos(await api.patch(`/my-cart/items/${idItem}`, { quantity }));

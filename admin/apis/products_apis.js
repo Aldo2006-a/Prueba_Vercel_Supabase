@@ -22,7 +22,7 @@ export const listStoreProducts = async (req, res) => {
       });
     }
 
-    const products = await productService.fetchByStore(storeId);
+    const products = await productService.fetchByStoreWithOptions(storeId);
 
     return ok(res, 'Productos listados correctamente', products);
   } catch (error) {

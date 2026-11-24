@@ -1,4 +1,4 @@
-import { Product, Category } from '../models/associations.js';
+import { Product, Category, OptionGroup, ProductOption } from '../models/associations.js';
 
 const includeCategory = { model: Category, as: 'category' };
 
@@ -10,6 +10,24 @@ const findAllByStore = async (storeId) => {
     where: { store_id: storeId },
     include: [includeCategory],
     order: [['category_id', 'ASC'], ['id', 'ASC']]
+  });
+};
+
+/**
+ * Carta pública: productos con su categoría y sus grupos de opciones
+ */
+const findAllByStoreWithOptions = async (storeId) => {
+  return await Product.findAll({
+    where: { store_id: storeId },
+    include: [
+      includeCategory,
+      { model: OptionGroup, as: 'option_groups', include: [{ model: ProductOption, as: 'options' }] }
+    ],
+    order: [
+      ['category_id', 'ASC'], ['id', 'ASC'],
+      [{ model: OptionGroup, as: 'option_groups' }, 'id', 'ASC'],
+      [{ model: OptionGroup, as: 'option_groups' }, { model: ProductOption, as: 'options' }, 'id', 'ASC']
+    ]
   });
 };
 
@@ -61,6 +79,7 @@ const deleteProduct = async (product) => {
 
 const productRepository = {
   findAllByStore,
+  findAllByStoreWithOptions,
   findByIdAndStore,
   findById,
   countByCategory,

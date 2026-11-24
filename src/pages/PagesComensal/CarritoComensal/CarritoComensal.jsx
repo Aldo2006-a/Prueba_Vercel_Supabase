@@ -142,6 +142,7 @@ export default function CarritoComensal({ carrito, setCarrito }) {
                       {soles(item.price)} c/u
                       {!item.available && ' · Agotado'}
                     </p>
+                    {item.options && item.options.length > 0 && <p className="nota-text">{item.options.map((o) => o.name).join(', ')}</p>}
                     {item.notes && <p className="nota-text">Nota: {item.notes}</p>}
                   </div>
                 </div>

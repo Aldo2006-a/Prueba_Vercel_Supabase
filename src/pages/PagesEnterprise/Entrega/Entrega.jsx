@@ -111,6 +111,7 @@ export default function Entrega() {
                                 <li key={i.id}>
                                     <span>
                                         {i.quantity} × {i.name}
+                                        {i.options && i.options.length > 0 && ` · ${i.options.map((o) => o.name).join(', ')}`}
                                         {i.notes && ` · ${i.notes}`}
                                     </span>
                                     <strong>{soles(i.subtotal)}</strong>

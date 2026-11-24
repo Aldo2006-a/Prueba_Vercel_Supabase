@@ -10,6 +10,10 @@ import OrderStatus from './order_status.js';
 import Order from './order.js';
 import OrderItem from './order_item.js';
 import StoreSchedule from './store_schedule.js';
+import OptionGroup from './option_group.js';
+import ProductOption from './product_option.js';
+import CartItemOption from './cart_item_option.js';
+import OrderItemOption from './order_item_option.js';
 
 // roles 1 --- N users
 Role.hasMany(User, { foreignKey: 'role_id', as: 'users' });
@@ -39,6 +43,22 @@ Product.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 Category.hasMany(Product, { foreignKey: 'category_id', as: 'products' });
 Product.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 
+// products 1 --- N option_groups 1 --- N product_options
+Product.hasMany(OptionGroup, { foreignKey: 'product_id', as: 'option_groups' });
+OptionGroup.belongsTo(Product, { foreignKey: 'product_id', as: 'product' });
+OptionGroup.hasMany(ProductOption, { foreignKey: 'option_group_id', as: 'options' });
+ProductOption.belongsTo(OptionGroup, { foreignKey: 'option_group_id', as: 'group' });
+
+// cart_items 1 --- N cart_item_options N --- 1 product_options
+CartItem.hasMany(CartItemOption, { foreignKey: 'cart_item_id', as: 'chosen' });
+CartItemOption.belongsTo(CartItem, { foreignKey: 'cart_item_id', as: 'item' });
+ProductOption.hasMany(CartItemOption, { foreignKey: 'product_option_id', as: 'cartChoices' });
+CartItemOption.belongsTo(ProductOption, { foreignKey: 'product_option_id', as: 'option' });
+
+// order_items 1 --- N order_item_options (copia con nombre y precio del momento)
+OrderItem.hasMany(OrderItemOption, { foreignKey: 'order_item_id', as: 'options' });
+OrderItemOption.belongsTo(OrderItem, { foreignKey: 'order_item_id', as: 'item' });
+
 // diners 1 --- 1 carts, stores 1 --- N carts
 Diner.hasOne(Cart, { foreignKey: 'diner_id', as: 'cart' });
 Cart.belongsTo(Diner, { foreignKey: 'diner_id', as: 'diner' });
@@ -63,4 +83,4 @@ Order.belongsTo(Store, { foreignKey: 'store_id', as: 'store' });
 Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
-export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule };
+export { Role, User, Store, Category, Product, Diner, Cart, CartItem, OrderStatus, Order, OrderItem, StoreSchedule, OptionGroup, ProductOption, CartItemOption, OrderItemOption };

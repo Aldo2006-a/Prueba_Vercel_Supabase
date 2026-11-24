@@ -74,3 +74,15 @@ export const formularioAProducto = (form, categorias) => {
     available: form.disponibilidad === 'Disponible',
   };
 };
+
+/* ---------- Opciones y agregados de un producto ---------- */
+export const obtenerGruposDeProducto = async (productoId) =>
+  datos(await api.get(`/my-store/products/${productoId}/option-groups`));
+
+export const crearGrupo = async (productoId, grupo) =>
+  datos(await api.post(`/my-store/products/${productoId}/option-groups`, grupo));
+
+export const actualizarGrupo = async (grupoId, grupo) =>
+  datos(await api.put(`/my-store/option-groups/${grupoId}`, grupo));
+
+export const eliminarGrupoApi = async (grupoId) => api.delete(`/my-store/option-groups/${grupoId}`);

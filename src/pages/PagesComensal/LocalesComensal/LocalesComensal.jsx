@@ -42,12 +42,11 @@ export default function LocalesComensal({ setCarrito }) {
 
   // Estados Modal Detalle de Producto
   const [productoDetalle, setProductoDetalle] = useState(null);
-  const [panElegido, setPanElegido] = useState("");
-  const [paraLlevarElegido, setParaLlevarElegido] = useState("local");
-  const [agregadosElegidos, setAgregadosElegidos] = useState([]);
+  // Opciones elegidas en el detalle: { [id del grupo]: [ids de alternativas] }
+  const [opcionesElegidas, setOpcionesElegidas] = useState({});
   const [cantidad, setCantidad] = useState(1);
   const [nota, setNota] = useState("");
-  const [errorObligatorio, setErrorObligatorio] = useState(false);
+  const [errorObligatorio, setErrorObligatorio] = useState(false); // false o id del grupo obligatorio sin elegir
   const [agregando, setAgregando] = useState(false);
   const [errorAgregar, setErrorAgregar] = useState("");
 
@@ -96,52 +95,53 @@ export default function LocalesComensal({ setCarrito }) {
 
   const handleAbrirDetalle = (prod) => {
     setProductoDetalle(prod);
-    setPanElegido("");
-    setParaLlevarElegido("local");
-    setAgregadosElegidos([]);
+    setOpcionesElegidas({});
     setCantidad(1);
     setNota("");
     setErrorObligatorio(false);
     setErrorAgregar("");
   };
 
-  const handleToggleAgregado = (id) => {
-    if (agregadosElegidos.includes(id)) {
-      setAgregadosElegidos(agregadosElegidos.filter((item) => item !== id));
-    } else {
-      setAgregadosElegidos([...agregadosElegidos, id]);
-    }
+  // Única: reemplaza la elección del grupo. Múltiple: agrega o quita la alternativa.
+  const handleElegirOpcion = (grupo, alternativaId) => {
+    setErrorObligatorio(false);
+    setOpcionesElegidas((prev) => {
+      const actuales = prev[grupo.id] || [];
+      if (grupo.seleccion === "unica") return { ...prev, [grupo.id]: [alternativaId] };
+      return {
+        ...prev,
+        [grupo.id]: actuales.includes(alternativaId)
+          ? actuales.filter((id) => id !== alternativaId)
+          : [...actuales, alternativaId],
+      };
+    });
   };
+
+  const idsElegidos = () => Object.values(opcionesElegidas).flat();
 
   const calcularTotalProducto = () => {
     if (!productoDetalle) return "0.00";
-    let base = productoDetalle.precio;
-
-    if (productoDetalle.opciones) {
-      const panObj = productoDetalle.opciones.tipoPan?.find((p) => p.id === panElegido);
-      if (panObj) base += panObj.precio;
-
-      const llevarObj = productoDetalle.opciones.paraLlevar?.find((p) => p.id === paraLlevarElegido);
-      if (llevarObj) base += llevarObj.precio;
-
-      agregadosElegidos.forEach((agrId) => {
-        const agrObj = productoDetalle.opciones.agregados?.find((a) => a.id === agrId);
-        if (agrObj) base += agrObj.precio;
-      });
-    }
-    return (base * cantidad).toFixed(2);
+    const elegidos = idsElegidos();
+    const extras = productoDetalle.grupos
+      .flatMap((g) => g.alternativas)
+      .filter((alt) => elegidos.includes(alt.id))
+      .reduce((suma, alt) => suma + alt.precio, 0);
+    return ((productoDetalle.precio + extras) * cantidad).toFixed(2);
   };
 
   const handleAgregarAlCarrito = async () => {
-    if (productoDetalle?.opciones?.tipoPan && !panElegido) {
-      setErrorObligatorio(true);
+    const faltante = productoDetalle.grupos.find(
+      (g) => g.obligatorio && !(opcionesElegidas[g.id] || []).length
+    );
+    if (faltante) {
+      setErrorObligatorio(faltante.id);
       return;
     }
 
     setAgregando(true);
     setErrorAgregar("");
 
-    const datos = { product_id: productoDetalle.id, quantity: cantidad, notes: nota };
+    const datos = { product_id: productoDetalle.id, quantity: cantidad, notes: nota, options: idsElegidos() };
 
     try {
       let carritoActual;
@@ -483,81 +483,41 @@ export default function LocalesComensal({ setCarrito }) {
                   {/* ALERTA OPCIÓN OBLIGATORIA */}
                   {errorObligatorio && (
                     <div className="alert-obligatorio">
-                      Elige un tipo de pan para continuar.
+                      Elige una opción en «{productoDetalle.grupos.find((g) => g.id === errorObligatorio)?.nombre}» para continuar.
                     </div>
                   )}
 
-                  {productoDetalle.opciones && (
-                    <div>
-                      {/* OBLIGATORIO */}
-                      <div className={`group-box ${errorObligatorio ? "group-box-error" : ""}`}>
-                        <label className="field-label" style={{ color: errorObligatorio ? "var(--primary)" : "var(--text-muted)", display: "block", marginBottom: "8px" }}>
-                          TIPO DE PAN · OBLIGATORIO
+                  {/* GRUPOS DE OPCIONES Y AGREGADOS DEL LOCAL */}
+                  {productoDetalle.grupos.map((grupo) => {
+                    const faltaEste = errorObligatorio === grupo.id;
+                    return (
+                      <div key={grupo.id} className={`group-box ${faltaEste ? "group-box-error" : ""}`}>
+                        <label className="field-label" style={{ color: faltaEste ? "var(--primary)" : "var(--text-muted)", display: "block", marginBottom: "8px" }}>
+                          {grupo.nombre.toUpperCase()} · {grupo.obligatorio ? "OBLIGATORIO" : "OPCIONAL"}
                         </label>
-                        {productoDetalle.opciones.tipoPan.map((pan) => (
-                          <label key={pan.id} className="radio-option">
-                            <span>
-                              <input
-                                type="radio"
-                                name="pan"
-                                checked={panElegido === pan.id}
-                                onChange={() => {
-                                  setPanElegido(pan.id);
-                                  setErrorObligatorio(false);
-                                }}
-                                style={{ marginRight: "8px" }}
-                              />
-                              {pan.nombre}
-                            </span>
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {pan.precio === 0 ? "Sin costo" : `+ S/ ${pan.precio.toFixed(2)}`}
-                            </span>
-                          </label>
-                        ))}
+                        {grupo.alternativas.map((alt) => {
+                          const marcada = (opcionesElegidas[grupo.id] || []).includes(alt.id);
+                          return (
+                            <label key={alt.id} className={grupo.seleccion === "unica" ? "radio-option" : "checkbox-option"}>
+                              <span>
+                                <input
+                                  type={grupo.seleccion === "unica" ? "radio" : "checkbox"}
+                                  name={`grupo-${grupo.id}`}
+                                  checked={marcada}
+                                  onChange={() => handleElegirOpcion(grupo, alt.id)}
+                                  style={{ marginRight: "8px" }}
+                                />
+                                {alt.nombre}
+                              </span>
+                              <span style={{ color: "var(--text-muted)" }}>
+                                {alt.precio === 0 ? "Sin costo" : `+ S/ ${alt.precio.toFixed(2)}`}
+                              </span>
+                            </label>
+                          );
+                        })}
                       </div>
-
-                      {/* OPCIONAL: LLEVAR */}
-                      <div className="group-box">
-                        <label className="field-label" style={{ display: "block", marginBottom: "8px" }}>PARA LLEVAR · OPCIONAL</label>
-                        {productoDetalle.opciones.paraLlevar.map((op) => (
-                          <label key={op.id} className="radio-option">
-                            <span>
-                              <input
-                                type="radio"
-                                name="llevar"
-                                checked={paraLlevarElegido === op.id}
-                                onChange={() => setParaLlevarElegido(op.id)}
-                                style={{ marginRight: "8px" }}
-                              />
-                              {op.nombre}
-                            </span>
-                            <span style={{ color: "var(--text-muted)" }}>
-                              {op.precio === 0 ? "Sin costo" : `+ S/ ${op.precio.toFixed(2)}`}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-
-                      {/* OPCIONAL: AGREGADOS */}
-                      <div className="group-box">
-                        <label className="field-label" style={{ display: "block", marginBottom: "8px" }}>AGREGADOS · OPCIONAL</label>
-                        {productoDetalle.opciones.agregados.map((agr) => (
-                          <label key={agr.id} className="checkbox-option">
-                            <span>
-                              <input
-                                type="checkbox"
-                                checked={agregadosElegidos.includes(agr.id)}
-                                onChange={() => handleToggleAgregado(agr.id)}
-                                style={{ marginRight: "8px" }}
-                              />
-                              {agr.nombre}
-                            </span>
-                            <span style={{ color: "var(--text-muted)" }}>+ S/ {agr.precio.toFixed(2)}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })}
 
                   {/* NOTA PARA EL LOCAL */}
                   <div className="group-box">

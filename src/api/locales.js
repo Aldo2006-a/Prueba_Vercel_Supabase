@@ -52,6 +52,14 @@ export const productoAComensal = (producto) => ({
   categoriaId: producto.category_id,
   agotado: !producto.available,
   tiempoPrep: producto.preparation_time,
+  // Grupos de opciones y agregados que el comensal puede elegir
+  grupos: (producto.option_groups || []).map((g) => ({
+    id: g.id,
+    nombre: g.name,
+    seleccion: g.selection_type,
+    obligatorio: g.is_required,
+    alternativas: g.options.map((o) => ({ id: o.id, nombre: o.name, precio: o.additional_price })),
+  })),
 });
 
 // Nombres de categoría sin repetir, en el orden definido por el local

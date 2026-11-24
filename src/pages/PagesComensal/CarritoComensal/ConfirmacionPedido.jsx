@@ -220,6 +220,7 @@ export default function ConfirmacionPedido({ carrito, setCarrito }) {
                 <strong>{item.quantity} × {item.name}</strong>
                 <span className="price-text">{soles(item.subtotal)}</span>
               </div>
+              {item.options && item.options.length > 0 && <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 0 0" }}>{item.options.map((o) => o.name).join(', ')}</p>}
               {item.notes && (
                 <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 0 0" }}>Nota: {item.notes}</p>
               )}

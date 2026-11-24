@@ -14,6 +14,7 @@ import * as profileApis from '../apis/profile_apis.js';
 import * as cartApis from '../apis/carts_apis.js';
 import * as orderApis from '../apis/orders_apis.js';
 import * as scheduleApis from '../apis/schedules_apis.js';
+import * as optionGroupApis from '../apis/option_groups_apis.js';
 import * as registrationApis from '../apis/registration_apis.js';
 import * as storeRequestApis from '../apis/store_requests_apis.js';
 import { loadMyDiner } from '../apis/diners_apis.js';
@@ -94,6 +95,12 @@ router.post('/api/v1/my-store/products', requireRole('enterprises'), storeApis.l
 router.get('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.getMyProductById);
 router.put('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.updateMyProduct);
 router.delete('/api/v1/my-store/products/:id', requireRole('enterprises'), storeApis.loadMyStore, productApis.deleteMyProduct);
+
+// api opciones y agregados de los productos (solo enterprises)
+router.get('/api/v1/my-store/products/:productId/option-groups', requireRole('enterprises'), storeApis.loadMyStore, optionGroupApis.listMyOptionGroups);
+router.post('/api/v1/my-store/products/:productId/option-groups', requireRole('enterprises'), storeApis.loadMyStore, optionGroupApis.createMyOptionGroup);
+router.put('/api/v1/my-store/option-groups/:id', requireRole('enterprises'), storeApis.loadMyStore, optionGroupApis.updateMyOptionGroup);
+router.delete('/api/v1/my-store/option-groups/:id', requireRole('enterprises'), storeApis.loadMyStore, optionGroupApis.deleteMyOptionGroup);
 
 // api comensal: mi carrito y mis pedidos (solo comensal, sobre SU perfil)
 router.get('/api/v1/my-cart', requireRole('comensal'), loadMyDiner, cartApis.getMyCart);

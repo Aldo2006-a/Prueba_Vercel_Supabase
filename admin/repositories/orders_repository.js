@@ -1,12 +1,12 @@
 import { Op } from 'sequelize';
 import sequelize from '../../configs/database.js';
-import { Order, OrderItem, OrderStatus, Diner, Store, Cart } from '../models/associations.js';
+import { Order, OrderItem, OrderItemOption, OrderStatus, Diner, Store, Cart } from '../models/associations.js';
 
 const orderInclude = [
   { model: OrderStatus, as: 'status', attributes: ['id', 'name'] },
   { model: Store, as: 'store', attributes: ['id', 'commercial_name', 'campus_location'] },
   { model: Diner, as: 'diner', attributes: ['id', 'first_name', 'last_name'] },
-  { model: OrderItem, as: 'items' }
+  { model: OrderItem, as: 'items', include: [{ model: OrderItemOption, as: 'options' }] }
 ];
 
 const itemsOrder = [{ model: OrderItem, as: 'items' }, 'id', 'ASC'];
@@ -86,10 +86,14 @@ const createFromCart = async ({ order, items, cartId }) => {
       { transaction }
     );
 
-    await OrderItem.bulkCreate(
-      items.map((item) => ({ ...item, order_id: created.id })),
-      { transaction }
-    );
+    for (const { options = [], ...item } of items) {
+      const createdItem = await OrderItem.create({ ...item, order_id: created.id }, { transaction });
+
+      await OrderItemOption.bulkCreate(
+        options.map((option) => ({ ...option, order_item_id: createdItem.id })),
+        { transaction }
+      );
+    }
 
     await Cart.destroy({ where: { id: cartId }, transaction });
 
