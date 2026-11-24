@@ -5,41 +5,51 @@ import { Router } from 'express';
 import * as owners from '../controllers/owner_controllers.js';
 import * as enterprises from '../controllers/enterprise_controllers.js';
 import * as comensales from '../controllers/comensal_controllers.js';
-import { redirectIfAuthenticated, requireAuth, requireRole} from '../../configs/middlewares.js';
+import { requireRole } from '../../configs/middlewares.js';
 
 const router = Router();
 
-// owner
+// Cada panel es una app React con su propio router interno.
+// Todas sus URLs entregan la misma vista base (controlador "panel");
+// para agregar una pantalla nueva, súmala a la lista de su panel.
 
-router.get('/owner', requireRole('owner'), owners.home);
-router.get('/owner/tablero', requireRole('owner'), owners.tablero);
-router.get('/owner/ventas', requireRole('owner'), owners.ventas);
-router.get('/owner/comensales', requireRole('owner'), owners.comensales);
-router.get('/owner/solicitudes', requireRole('owner'), owners.solicitudes);
-router.get('/owner/ranking', requireRole('owner'), owners.ranking);
+// owner
+router.get([
+  '/owner',
+  '/owner/tablero',
+  '/owner/ventas',
+  '/owner/comensales',
+  '/owner/solicitudes',
+  '/owner/ranking',
+], requireRole('owner'), owners.panel);
 
 // enterprises
-router.get('/enterprises', requireRole('enterprises'), enterprises.home);
-router.get('/enterprises/bandeja', requireRole('enterprises'), enterprises.bandeja);
-router.get('/enterprises/resumenDia', requireRole('enterprises'), enterprises.resumenDia);
-router.get('/enterprises/entrega', requireRole('enterprises'), enterprises.entrega);
-router.get('/enterprises/opcionesAgregados', requireRole('enterprises'), enterprises.opcionesAgregados);
-router.get('/enterprises/Micarta', requireRole('enterprises'), enterprises.Micarta);
-router.get('/enterprises/NuevoProducto', requireRole('enterprises'), enterprises.NuevoProducto);
-router.get('/enterprises/agotados', requireRole('enterprises'), enterprises.agotados);
-router.get('/enterprises/perfil', requireRole('enterprises'), enterprises.perfil);
-router.get('/enterprises/PerfilVistaPrevia', requireRole('enterprises'), enterprises.PerfilVistaPrevia);
-router.get('/enterprises/horario', requireRole('enterprises'), enterprises.horario);
-router.get('/enterprises/resenas', requireRole('enterprises'), enterprises.resenas);
+router.get([
+  '/enterprises',
+  '/enterprises/bandeja',
+  '/enterprises/resumenDia',
+  '/enterprises/entrega',
+  '/enterprises/opcionesAgregados',
+  '/enterprises/Micarta',
+  '/enterprises/NuevoProducto',
+  '/enterprises/agotados',
+  '/enterprises/perfil',
+  '/enterprises/PerfilVistaPrevia',
+  '/enterprises/horario',
+  '/enterprises/resenas',
+], requireRole('enterprises'), enterprises.panel);
 
 // comensal
-router.get('/comensales', requireRole('comensal'), comensales.home);
-router.get('/comensales/localescomensal', requireRole('comensal'), comensales.localescomensal);
-router.get('/comensales/pedidos', requireRole('comensal'), comensales.pedidos);
-router.get('/comensales/calificaciones', requireRole('comensal'), comensales.calificaciones);
-router.get('/comensales/micuenta', requireRole('comensal'), comensales.micuenta);
-router.get('/comensales/carrito', requireRole('comensal'), comensales.carrito);
+router.get([
+  '/comensales',
+  '/comensales/localescomensal',
+  '/comensales/pedidos',
+  '/comensales/calificaciones',
+  '/comensales/micuenta',
+  '/comensales/carrito',
+], requireRole('comensal'), comensales.panel);
 
 router.post('/enterprises/logout', enterprises.salir);
 router.post('/comensales/logout', comensales.salir);
+
 export default router;

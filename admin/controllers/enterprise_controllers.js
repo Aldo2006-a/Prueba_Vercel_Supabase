@@ -1,82 +1,14 @@
-// admin\controllers\enterprise_controllers.js
+// admin/controllers/enterprise_controllers.js
 
-export function home(req, res) {
+// Todas las pantallas del panel de empresas son React: el servidor solo entrega
+// la vista base (enterprises/home.ejs) y React Router muestra la pantalla
+// que corresponde a la URL.
+export function panel(req, res) {
   return res.render('enterprises/home', {
     title: 'Bienvenido Empresa',
-    currentPage: 'home',
   });
 }
 
-export function bandeja(req, res) {
-  return res.render('enterprises/bandeja', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'bandeja',
-  });
-}
-
-export function resumenDia(req, res) {
-  return res.render('enterprises/resumenDia', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'resumenDia',
-  });
-}
-
-export function entrega(req, res) {
-  return res.render('enterprises/entrega', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'entrega',
-  });
-}
-export function opcionesAgregados(req, res) {
-  return res.render('enterprises/opcionesAgregados', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'opcionesAgregados',
-  });
-}
-export function agotados(req, res) {
-  return res.render('enterprises/agotados', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'agotados',
-  });
-}
-export function perfil(req, res) {
-  return res.render('enterprises/perfil', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'perfil',
-  });
-}
-
-export function PerfilVistaPrevia(req, res) {
-  return res.render('enterprises/PerfilVistaPrevia', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'PerfilVistaPrevia',
-  });
-}
-export function horario(req, res) {
-  return res.render('enterprises/horario', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'horario',
-  });
-}
-
-export function Micarta(req, res) {
-  return res.render('enterprises/Micarta', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'Micarta',
-  });
-} 
-export function NuevoProducto(req, res) {
-  return res.render('enterprises/NuevoProducto', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'NuevoProducto',
-  });
-} 
-export function resenas(req, res) {
-  return res.render('enterprises/resenas', {
-    title: 'Bienvenido Empresa',
-    currentPage: 'resenas',
-  });
-}
 export function salir(req, res) {
   req.session.destroy((err) => {
     if (err) {
